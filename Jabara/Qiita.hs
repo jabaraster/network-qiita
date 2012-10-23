@@ -5,13 +5,17 @@ module Jabara.Qiita (
   authenticate
   , getAnonymousRateLimit
   , getRateLimit
-  , QiitaError
-  , Auth
-  , RateLimit
+  , getLoginUserInformation
+  , QiitaError(..)
+  , Auth(..)
+  , RateLimit(..)
+  , User(..)
   ) where
 
+import Control.Applicative ((<*>))
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (FromJSON, decode)
+import Data.Aeson (Object, FromJSON, parseJSON, (.:), decode)
+import Data.Functor ((<$>))
 import Data.ByteString
 import qualified Data.ByteString.Lazy as L
 import Data.Maybe
@@ -26,10 +30,26 @@ import Network.HTTP.Types
 
 data QiitaError = QiitaError { errorMessage :: String }
                   deriving (Show, Generic)
-data Auth = Auth { url_name :: String, token :: String }
+data Auth = Auth { token :: String }
             deriving (Show, Eq, Generic)
 data RateLimit = RateLimit { remaining :: Int, limit :: Int }
                  deriving (Show, Eq, Generic)
+data User = User { name :: String
+                 , url_name :: String
+                 , profile_image_url :: String
+                 , url :: String
+                 , description :: String
+                 , website_url :: String
+                 , organization :: String
+                 , location :: String
+                 , facebook :: String
+                 , linkedin :: String
+                 , twitter :: String
+                 , github :: String
+                 , followers :: Int
+                 , following_users :: Int
+                 , items :: Int
+                 } deriving (Show, Eq, Generic)
 
 {- ------------------------------------------
  - instance difinitions.
@@ -38,6 +58,7 @@ data RateLimit = RateLimit { remaining :: Int, limit :: Int }
 instance FromJSON QiitaError
 instance FromJSON Auth
 instance FromJSON RateLimit
+instance FromJSON User
 
 {- ------------------------------------------
  - constants.
@@ -45,6 +66,7 @@ instance FromJSON RateLimit
 endpoint = "https://qiita.com/api/v1"
 authUrl = endpoint ++ "/auth"
 rateLimitUrl = endpoint ++ "/rate_limit"
+userUrl = endpoint ++ "/user"
 
 {- ------------------------------------------
  - public functions.
@@ -55,11 +77,11 @@ rateLimitUrl = endpoint ++ "/rate_limit"
  - Qiitaに認証を投げトークンを得る
 ------------------------------------------- -}
 authenticate :: ByteString -> ByteString -> IO (Either QiitaError Auth)
-authenticate user pass = do
-  req <- liftIO $ parseUrl authUrl
-          >>= return . urlEncodedBody [("url_name", user), ("password", pass)]
-          >>= \r -> return $ r { checkStatus = checkStatus' }
-  requestJson req
+authenticate user pass = liftIO $ do
+  parseUrl authUrl
+  >>= return . urlEncodedBody [("url_name", user), ("password", pass)]
+  >>= \request -> return (request { checkStatus = checkStatus' })
+  >>= requestJson
 
 {- ------------------------------------------
  - 未ログインユーザのAPI実行回数を得る.
@@ -73,16 +95,20 @@ getAnonymousRateLimit = do
  - ログイン済みユーザのAPI実行回数を得る.
 ------------------------------------------- -}
 getRateLimit :: Auth -> IO (RateLimit)
-getRateLimit auth = do
-  r <- simpleHttp (rateLimitUrl ++ "?" ++ (tok auth))
-  return $ fromJust $ decode r
+getRateLimit auth = simpleHttp (rateLimitUrl ++ (tok auth))
+  >>= return . fromJust . decode
 
-
+{- ------------------------------------------
+ - ログイン済みユーザの情報を得る.
+------------------------------------------- -}
+getLoginUserInformation :: Auth -> IO User
+getLoginUserInformation auth = simpleHttp (userUrl ++ (tok auth))
+  >>= return . fromJust . decode
 {- ------------------------------------------
  - private functions.
 ------------------------------------------- -}
 
-tok auth = "token=" ++ (token auth)
+tok auth = "?token=" ++ (token auth)
 
 checkStatus' status headers
   | statusCode status < 500 = Nothing
