@@ -4,6 +4,6 @@ cabal-dev
 *.hi
 *.chi
 *.chs.h
-**/*~
-**/*.swp
-**/*.swo
+*~
+*.swp
+*.swo
