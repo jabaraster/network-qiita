@@ -133,20 +133,15 @@ getRateLimit auth = simpleHttp (rateLimitUrl ++ (tok auth))
 
 {- ------------------------------------------
  - ログイン済みユーザの情報を得る.
+ - StateTの1つ目の型引数はアプリケーションの内部状態.
 ------------------------------------------- -}
 getLoginUserInformation :: StateT QiitaContext IO User
 getLoginUserInformation = do
-  ctx <- get
+  ctx <- get -- StateTからQiitaContextを取り出す
   req <- parseUrl (userUrl ++ (tok $ auth $ ctx))
   res <- doRequest req
-
-  let rateLimit = parseRateLimit res
-  put $ ctx { rateLimit = rateLimit }
-
-  let body = responseBody res
-  return $ fromJust $ decode body
-
-doRequest req = withManager (\manager -> httpLbs req manager)
+  put $ ctx { rateLimit = parseRateLimit res} -- StateTに新しいQiitaContextを格納する
+  return $ fromJust $ decode $ responseBody res
 
 {- ------------------------------------------
  - private functions.
@@ -158,15 +153,6 @@ checkStatus' status headers
   | statusCode status < 500 = Nothing
   | otherwise               = throw $ StatusCodeException status headers
 
---decodeJsonResponse :: (FromJSON a, Control.Monad.IO.Class.MonadIO m,
---      Control.Monad.Trans.Control.MonadBaseControl IO m, MonadUnsafeIO m,
---      MonadThrow m) =>
---     Request (ResourceT m) -> m (Either QiitaError a)
-requestJson req = do
-  withManager $ \manager -> do
-    res <- httpLbs req manager
-    return $ decodeJsonBody $ responseBody res
-
 decodeJsonBody :: (FromJSON a) => L.ByteString -> Either QiitaError a
 decodeJsonBody body = case decode body of
   Just auth -> Right auth
@@ -175,10 +161,13 @@ decodeJsonBody body = case decode body of
                  Just e  -> Left e
 
 parseRateLimit :: Response b -> RateLimit
-parseRateLimit res = RateLimit {
-                       limit = lookupIntValue "X-RateLimit-Limit" $ responseHeaders res
-                       , remaining = lookupIntValue "X-RateLimit-Remaining" $ responseHeaders res
-                     }
+parseRateLimit res = let headers = responseHeaders res in
+  RateLimit {
+    limit = lookupIntValue "X-RateLimit-Limit" headers
+    , remaining = lookupIntValue "X-RateLimit-Remaining" headers
+  }
+
+doRequest req = withManager (\manager -> httpLbs req manager)
 
 lookupIntValue :: HeaderName -> [Header] -> Int
 lookupIntValue headerName headers = case lookup headerName headers of

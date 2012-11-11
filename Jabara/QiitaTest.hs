@@ -32,12 +32,12 @@ core = do
   ctx1 <- get
   liftIO $ putStrLn ("Pre: " ++ (show ctx1))
 
-  user <- getLoginUserInformation'
+  user <- getLoginUserInformation
   liftIO $ print user
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-  user' <- getLoginUserInformation'
+  user' <- getLoginUserInformation
   liftIO $ print user'
   ctx3 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx3))
