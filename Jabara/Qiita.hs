@@ -2,10 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Jabara.Qiita (
-  authenticate
-  , withAuthenticate
+  withAuthentication
   , getAnonymousRateLimit
   , getRateLimit
+  , getUserInformation
   , getLoginUserInformation
   , QiitaError(..)
   , Auth(..)
@@ -13,12 +13,15 @@ module Jabara.Qiita (
   , User(..)
   , QiitaContext(..)
 -- for test
+  , setRequestBodyJson
+  , doRequest
+  , parseRateLimit
   ) where
 
 import Control.Applicative ((<*>))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State
-import Data.Aeson (Object, FromJSON, parseJSON, (.:), decode)
+import Data.Aeson (Object, ToJSON, FromJSON, parseJSON, encode, decode)
 import Data.Functor ((<$>))
 import Data.ByteString
 import qualified Data.ByteString.Lazy as L
@@ -69,22 +72,32 @@ instance FromJSON RateLimit
 instance FromJSON User
 
 {- ------------------------------------------
+ - type alias.
+------------------------------------------- -}
+type UserName = ByteString
+type Password = ByteString
+
+{- ------------------------------------------
  - constants.
 ------------------------------------------- -}
 endpoint = "https://qiita.com/api/v1"
 authUrl = endpoint ++ "/auth"
 rateLimitUrl = endpoint ++ "/rate_limit"
 userUrl = endpoint ++ "/user"
+usersUrl = endpoint ++ "/users"
 
 {- ------------------------------------------
  - public functions.
 ------------------------------------------- -}
 
-withAuthenticate :: ByteString -> ByteString
-                   -> (QiitaError -> RateLimit -> IO a)
-                   -> (QiitaContext -> IO a)
+{- ------------------------------------------
+ - Qiitaに認証を投げ、エラー処理あるいは主処理を実行します.
+------------------------------------------- -}
+withAuthentication :: UserName -> Password
+                   -> (QiitaError -> RateLimit -> IO a) -- エラー処理
+                   -> (QiitaContext -> IO a) -- 主処理
                    -> IO a
-withAuthenticate user pass errorHandler mainOperation = do
+withAuthentication user pass errorHandler mainOperation = do
   -- リクエストの組み立て
   req <- parseUrl authUrl
            >>= return . urlEncodedBody [("url_name", user), ("password", pass)]
@@ -93,54 +106,45 @@ withAuthenticate user pass errorHandler mainOperation = do
   res <- withManager $ \manager -> httpLbs req manager
   -- レスポンスの処理
   let rateLimit = parseRateLimit res
---  let headers = responseHeaders res
---  let limit = lookupIntValue "X-RateLimit-Limit" headers
---  let remaining = lookupIntValue "X-RateLimit-Remaining" headers
---  let rateLimit = RateLimit { remaining = remaining, limit = limit }
   let eAuth = decodeJsonBody $ responseBody res
   case eAuth of
     Left  err  -> errorHandler err rateLimit
     Right auth -> mainOperation $ QiitaContext { auth = auth, rateLimit = rateLimit }
 
 {- ------------------------------------------
- - Qiitaに認証を投げトークンを得る
-------------------------------------------- -}
--- authenticate :: ByteString -> ByteString -> IO (Either QiitaError Auth)
-authenticate user pass = do
-  req <- parseUrl authUrl
-           >>= return . urlEncodedBody [("url_name", user), ("password", pass)]
-           >>= \request -> return (request { checkStatus = checkStatus' })
-  res <- withManager $ \manager -> httpLbs req manager
-  let headers = responseHeaders res
-  let limit = lookupIntValue "X-RateLimit-Limit" headers
-  let remaining = lookupIntValue "X-RateLimit-Remaining" headers
-  return $ RateLimit { remaining = remaining, limit = limit }
-
-{- ------------------------------------------
  - 未ログインユーザのAPI実行回数を得る.
 ------------------------------------------- -}
-getAnonymousRateLimit :: IO (RateLimit)
-getAnonymousRateLimit = do
-  r <- simpleHttp rateLimitUrl
-  return $ fromJust $ decode r
+getAnonymousRateLimit :: IO RateLimit
+getAnonymousRateLimit = simpleHttp rateLimitUrl
+  >>= return . fromJust . decode
 
 {- ------------------------------------------
  - ログイン済みユーザのAPI実行回数を得る.
 ------------------------------------------- -}
-getRateLimit :: Auth -> IO (RateLimit)
+getRateLimit :: Auth -> IO RateLimit
 getRateLimit auth = simpleHttp (rateLimitUrl ++ (tok auth))
   >>= return . fromJust . decode
 
+
+{- ------------------------------------------
+ - 任意のユーザのAPI実行回数を得る.
+------------------------------------------- -}
+getUserInformation :: UserName -> IO User
+getUserInformation user = do
+  req <- parseUrl (usersUrl ++ "/" ++ (C8.unpack user))
+  res <- doRequest req
+  return $ fromJust $ decode $ responseBody res
+
 {- ------------------------------------------
  - ログイン済みユーザの情報を得る.
- - StateTの1つ目の型引数はアプリケーションの内部状態.
+ - StateTの1つ目の型引数QiitaContextはアプリケーションの内部状態.
 ------------------------------------------- -}
 getLoginUserInformation :: StateT QiitaContext IO User
 getLoginUserInformation = do
   ctx <- get -- StateTからQiitaContextを取り出す
   req <- parseUrl (userUrl ++ (tok $ auth $ ctx))
   res <- doRequest req
-  put $ ctx { rateLimit = parseRateLimit res} -- StateTに新しいQiitaContextを格納する
+  put $ ctx { rateLimit = parseRateLimit res } -- StateTに新しいQiitaContextを格納する
   return $ fromJust $ decode $ responseBody res
 
 {- ------------------------------------------
@@ -167,10 +171,23 @@ parseRateLimit res = let headers = responseHeaders res in
     , remaining = lookupIntValue "X-RateLimit-Remaining" headers
   }
 
+-- doRequest
+--   :: (MonadIO m, Control.Monad.Trans.Control.MonadBaseControl IO m,
+--       Control.Monad.Trans.Resource.MonadUnsafeIO m,
+--       Control.Monad.Trans.Resource.MonadThrow m) =>
+--      Request (Control.Monad.Trans.Resource.ResourceT m)
+--      -> m (Response LC.ByteString)
 doRequest req = withManager (\manager -> httpLbs req manager)
 
 lookupIntValue :: HeaderName -> [Header] -> Int
 lookupIntValue headerName headers = case lookup headerName headers of
                                           Nothing  -> 999
                                           Just val -> read $ C8.unpack val
+
+setRequestBodyJson :: (ToJSON j) => j -> Request m -> Request m
+setRequestBodyJson entity req = req {
+                                  requestBody = RequestBodyLBS $ encode entity
+                                  , method = "POST"
+                                  , requestHeaders = [("content-type","application/json")]
+                                }
 
