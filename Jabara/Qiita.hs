@@ -7,31 +7,46 @@ module Jabara.Qiita (
   , getRateLimit
   , getUserInformation
   , getLoginUserInformation
+  , getTagsFirstPage
+  , getTagsFirstPage'
+  , getTagsAFirstPage
+  , getTagsAFirstPage'
   , QiitaError(..)
   , Auth(..)
   , RateLimit(..)
   , User(..)
+  , Tag(..)
   , QiitaContext(..)
+  , Pagenation(..)
+  , ListData(..)
 -- for test
   , setRequestBodyJson
   , doRequest
   , parseRateLimit
+  , parsePagenation
+  , parsePagenationCore
+  , onePagenationParser
+  , tagsUrl
   ) where
 
-import Control.Applicative ((<*>))
+import Control.Applicative ((<*>), (<|>))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State
-import Data.Aeson (Object, ToJSON, FromJSON, parseJSON, encode, decode)
-import Data.Functor ((<$>))
+import Data.Aeson
 import Data.ByteString
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Char8 as C8
+import Data.Functor ((<$>))
 import Data.Maybe
 import GHC.Exception (throw)
 import GHC.Generics (Generic)
 import Network.HTTP.Conduit
 import Network.HTTP.Types
 import Network.HTTP.Types.Header
+
+import qualified Text.Parsec as P
+import Text.Parsec.String
+import Data.Attoparsec.Char8 (char)
 
 {- ------------------------------------------
  - data difinitions.
@@ -41,7 +56,7 @@ data QiitaError = QiitaError { errorMessage :: String }
                   deriving (Show, Generic)
 data Auth = Auth { token :: String }
             deriving (Show, Eq, Generic)
-data RateLimit = RateLimit { remaining :: Int, limit :: Int }
+data RateLimit = RateLimit {remaining :: Int, limit :: Int }
                  deriving (Show, Eq, Generic)
 data User = User { name :: String
                  , url_name :: String
@@ -61,6 +76,36 @@ data User = User { name :: String
                  } deriving (Show, Eq, Generic)
 data QiitaContext = QiitaContext { auth :: Auth, rateLimit :: RateLimit }
                     deriving (Show, Eq, Generic)
+data Pagenation = Pagenation { pageRel :: ByteString, pageUrl :: ByteString }
+                  deriving (Show, Eq)
+-- 
+-- 未認証な状態で取得可能なタグ情報.
+-- 
+data Tag = Tag { tag_name :: String
+                 , tag_url_name :: String
+                 , tag_icon_url :: String
+                 , tag_item_count :: Int
+                 , tag_follower_count :: Int
+               } deriving (Show, Eq)
+-- 
+-- 認証済みユーザが取得可能なタグ情報.
+-- 
+data TagA = TagA { taga_name :: String
+                 , taga_url_name :: String
+                 , taga_icon_url :: String
+                 , taga_item_count :: Int
+                 , taga_follower_count :: Int
+                 , taga_following :: Bool
+               } deriving (Show, Eq)
+data ListData a = ListData { list :: [a], pagenation :: [Pagenation] }
+                  deriving (Show, Eq)
+
+{- ------------------------------------------
+ - type alias.
+------------------------------------------- -}
+type UserName = ByteString
+type Password = ByteString
+type PerPage = Int
 
 {- ------------------------------------------
  - instance difinitions.
@@ -71,20 +116,36 @@ instance FromJSON Auth
 instance FromJSON RateLimit
 instance FromJSON User
 
-{- ------------------------------------------
- - type alias.
-------------------------------------------- -}
-type UserName = ByteString
-type Password = ByteString
+-- 一部セレクタの名前がかぶるので手動でパースを書かざるを得ない.
+instance FromJSON Tag where
+  parseJSON (Object v) = Tag <$>
+                            v .: "name"
+                            <*> v .: "url_name"
+                            <*> v .: "icon_url" 
+                            <*> v .: "item_count"
+                            <*> v .: "follower_count"
+  parseJSON _          = mzero
+
+instance FromJSON TagA where
+  parseJSON (Object v) = TagA <$>
+                            v .: "name"
+                            <*> v .: "url_name"
+                            <*> v .: "icon_url" 
+                            <*> v .: "item_count"
+                            <*> v .: "follower_count"
+                            <*> v .: "following"
+  parseJSON _          = mzero
 
 {- ------------------------------------------
  - constants.
 ------------------------------------------- -}
+defaultPerPage = 20
 endpoint = "https://qiita.com/api/v1"
 authUrl = endpoint ++ "/auth"
 rateLimitUrl = endpoint ++ "/rate_limit"
 userUrl = endpoint ++ "/user"
 usersUrl = endpoint ++ "/users"
+tagsUrl = endpoint ++ "/tags"
 
 {- ------------------------------------------
  - public functions.
@@ -148,6 +209,35 @@ getLoginUserInformation = do
   return $ fromJust $ decode $ responseBody res
 
 {- ------------------------------------------
+ - タグ一覧を得るための一連の関数.
+------------------------------------------- -}
+
+getTagsFirstPage' :: PerPage -> IO (ListData Tag, RateLimit)
+getTagsFirstPage' perPage = do
+  req <- parseUrl (tagsUrl ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = tags, pagenation = ps }, rateLimit)
+
+getTagsFirstPage :: IO (ListData Tag, RateLimit)
+getTagsFirstPage = getTagsFirstPage' defaultPerPage
+
+getTagsAFirstPage' :: PerPage -> StateT QiitaContext IO (ListData TagA)
+getTagsAFirstPage' perPage = do
+  ctx <- get
+  req <- parseUrl (tagsUrl ++ (tok $ auth $ ctx) ++ "&per_page=" ++ (show perPage))
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list = tags, pagenation = ps }
+
+getTagsAFirstPage :: StateT QiitaContext IO (ListData TagA)
+getTagsAFirstPage = getTagsAFirstPage' defaultPerPage
+
+{- ------------------------------------------
  - private functions.
 ------------------------------------------- -}
 
@@ -190,4 +280,31 @@ setRequestBodyJson entity req = req {
                                   , method = "POST"
                                   , requestHeaders = [("content-type","application/json")]
                                 }
+
+parsePagenation :: Response b -> [Pagenation]
+parsePagenation res = case lookup "Link" $ responseHeaders res of
+                        Nothing -> []
+                        Just l  -> parsePagenationCore l
+
+{- ------------------------------------------
+- パース対象のヘッダは以下のようなもの.
+- Link: <https://qiita.com/api/v1/tags.json?page=3&per_page=30>; rel="next", <https://qiita.com/api/v1/tags.json?page=45&per_page=30>; rel="last"
+------------------------------------------- -}
+parsePagenationCore :: ByteString -> [Pagenation]
+parsePagenationCore source = case P.parse pagenationParser "" (C8.unpack source) of
+                               Left  _  -> []
+                               Right ps -> ps
+
+pagenationParser :: Parser [Pagenation]
+pagenationParser = P.many1 onePagenationParser
+
+onePagenationParser :: Parser Pagenation
+onePagenationParser = do
+  P.spaces
+  P.char '<'
+  url <- P.many1 $ P.noneOf ">"
+  P.string ">; rel=\""
+  rel <- P.many1 $ P.noneOf "\""
+  P.try (P.string "\"," >> P.spaces) <|> P.spaces
+  return $ Pagenation { pageUrl = C8.pack url, pageRel = C8.pack rel }
 

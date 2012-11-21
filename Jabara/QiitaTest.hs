@@ -8,10 +8,14 @@ import Jabara.Qiita
 import Control.Monad.State
 import Data.Aeson
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy.Char8 as LC
+import Data.Maybe
 import GHC.Generics (Generic)
 import Network.HTTP.Conduit
+
+import Text.Parsec
 
 {- ------------------------------------------
  - withAuthentication利用例.
@@ -41,51 +45,33 @@ run = do
 ------------------------------------------- -}
 runCore :: StateT QiitaContext IO ()
 runCore = do
+  liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
   ctx1 <- get
   liftIO $ putStrLn ("Pre: " ++ (show ctx1))
 
+  liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
   user <- getLoginUserInformation
   liftIO $ print user
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
+  liftIO $ putStrLn ""
   liftIO $ putStrLn "- 3. -----------------------------"
   user' <- liftIO $ getUserInformation "gishi_yama"
   liftIO $ print user'
   ctx3 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx3))
 
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 4. -----------------------------"
+  tags <- getTagsAFirstPage
 
+  liftIO $ mapM_ (\tag -> print $ (++) "  ==== " (show tag))  (list tags)
+  liftIO $ putStrLn ">>>>>>>>>>"
+  liftIO $ print $ pagenation tags
+  ctx4 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx4))
 
-
-
-data UserModel = UserModel {
-                   userName::B.ByteString
-                   , userNickname::B.ByteString
-                 } deriving (Show, Eq, Generic)
-
--- instance ToJSON User
-instance ToJSON UserModel
-instance FromJSON UserModel
-
-j = LC.pack "{\"name\":\"jabaraster\",\"url_name\":\"jabaraster\",\"profile_image_url\":\"https://si0.twimg.com/profile_images/1272321155/duke_globe_normal.gif\",\"url\":\"http://qiita.com/users/jabaraster\",\"description\":\"\",\"website_url\":\"\",\"organization\":\"\",\"location\":\"Kumamoto, Japan\",\"facebook\":\"\",\"linkedin\":\"\",\"twitter\":\"jabaraster\",\"github\":\"jabaraster\",\"followers\":2,\"following_users\":4,\"items\":8}"
-
-
-run2 :: IO LC.ByteString
-run2 = do
-  req <- parseUrl "https://qiita.com/api/v1/tags.json?page=3&per_page=30"
-           >>= return . urlEncodedBody [("url", "")]
-  liftIO $ print $ responseTimeout req
-  res <- withManager $ \manager -> httpLbs req manager
-  return $ responseBody res
-
-run3 :: IO ()
-run3 = do
-  req <- parseUrl "http://localhost:8081/rest/test/"
-           >>= return . setRequestBodyJson (UserModel {userName = "jabara", userNickname = "jabaraster"})
-  res <- doRequest req
-  print $ lookup "Link" $ responseHeaders res
-  return ()
 
