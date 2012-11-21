@@ -26,12 +26,12 @@ module Jabara.Qiita (
   , parsePagenation
   , parsePagenationCore
   , onePagenationParser
-  , tagsUrl
   ) where
 
 import Control.Applicative ((<*>), (<|>))
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State
+import Data.Functor ((<$>))
 import Data.Aeson
 import Data.ByteString
 import qualified Data.ByteString.Lazy as L

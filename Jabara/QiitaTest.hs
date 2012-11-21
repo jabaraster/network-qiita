@@ -15,7 +15,6 @@ import Data.Maybe
 import GHC.Generics (Generic)
 import Network.HTTP.Conduit
 
-import Text.Parsec
 
 {- ------------------------------------------
  - withAuthentication利用例.
@@ -70,7 +69,7 @@ runCore = do
 
   liftIO $ mapM_ (\tag -> print $ (++) "  ==== " (show tag))  (list tags)
   liftIO $ putStrLn ">>>>>>>>>>"
-  liftIO $ print $ pagenation tags
+  liftIO $ mapM_ (\page -> print $ (++) "  >>>> " (show page)) (pagenation tags)
   ctx4 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx4))
 
