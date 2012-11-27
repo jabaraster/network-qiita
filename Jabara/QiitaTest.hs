@@ -67,10 +67,16 @@ runCore = do
   liftIO $ putStrLn "- 4. -----------------------------"
   tags <- getTagsAFirstPage
 
-  liftIO $ mapM_ (\tag -> print $ (++) "  ==== " (show tag))  (list tags)
-  liftIO $ putStrLn ">>>>>>>>>>"
+--  liftIO $ mapM_ (\tag -> print $ (++) "  ==== " (show tag))  (list tags)
+--  liftIO $ putStrLn ">>>>>>>>>>"
   liftIO $ mapM_ (\page -> print $ (++) "  >>>> " (show page)) (pagenation tags)
   ctx4 <- get
-  liftIO $ putStrLn ("Post: " ++ (show ctx4))
+--  liftIO $ putStrLn ("Post: " ++ (show ctx4))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 5. -----------------------------"
+  tags' <- getTagsAWithPage (pagenation tags !! 0)
+  liftIO $ mapM_ (\l ->  print $ l) (list tags')
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags')
 
 

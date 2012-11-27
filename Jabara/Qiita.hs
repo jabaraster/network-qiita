@@ -9,8 +9,10 @@ module Jabara.Qiita (
   , getLoginUserInformation
   , getTagsFirstPage
   , getTagsFirstPage'
+  , getTagsWithPage
   , getTagsAFirstPage
   , getTagsAFirstPage'
+  , getTagsAWithPage
   , QiitaError(..)
   , Auth(..)
   , RateLimit(..)
@@ -20,12 +22,12 @@ module Jabara.Qiita (
   , Pagenation(..)
   , ListData(..)
 -- for test
-  , setRequestBodyJson
-  , doRequest
-  , parseRateLimit
-  , parsePagenation
-  , parsePagenationCore
-  , onePagenationParser
+--  , setRequestBodyJson
+--  , doRequest
+--  , parseRateLimit
+--  , parsePagenation
+--  , parsePagenationCore
+--  , onePagenationParser
   ) where
 
 import Control.Applicative ((<*>), (<|>))
@@ -224,6 +226,16 @@ getTagsFirstPage' perPage = do
 getTagsFirstPage :: IO (ListData Tag, RateLimit)
 getTagsFirstPage = getTagsFirstPage' defaultPerPage
 
+getTagsWithPage :: Pagenation -> IO (ListData Tag, RateLimit)
+getTagsWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  let rateLimit = parseRateLimit res
+  let list = ListData { list = tags, pagenation = ps }
+  return $ (list, rateLimit)
+
 getTagsAFirstPage' :: PerPage -> StateT QiitaContext IO (ListData TagA)
 getTagsAFirstPage' perPage = do
   ctx <- get
@@ -236,6 +248,16 @@ getTagsAFirstPage' perPage = do
 
 getTagsAFirstPage :: StateT QiitaContext IO (ListData TagA)
 getTagsAFirstPage = getTagsAFirstPage' defaultPerPage
+
+getTagsAWithPage :: Pagenation -> StateT QiitaContext IO (ListData TagA)
+getTagsAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  ctx <- get
+  put $ ctx { rateLimit = parseRateLimit res }
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list = tags, pagenation = ps }
 
 {- ------------------------------------------
  - private functions.
