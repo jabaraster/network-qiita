@@ -35,7 +35,7 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runCore2 ctx) -- 認証OK後の処理
+        (\ctx -> evalStateT runCore ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
