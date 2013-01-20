@@ -13,14 +13,20 @@ module Jabara.Qiita (
   , getTagsAFirstPage
   , getTagsAFirstPage'
   , getTagsAWithPage
+  , postItem
   , QiitaError(..)
   , Auth(..)
   , RateLimit(..)
   , User(..)
   , Tag(..)
+  , PostItem(..)
+  , PostTag(..)
   , QiitaContext(..)
   , Pagenation(..)
   , ListData(..)
+  , ItemUser(..)
+  , ItemTag(..)
+  , Item(..)
 -- for test
 --  , setRequestBodyJson
 --  , doRequest
@@ -38,6 +44,7 @@ import Data.Aeson
 import Data.ByteString
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Char8 as C8
+import qualified Data.Vector as V
 import Data.Functor ((<$>))
 import Data.Maybe
 import GHC.Exception (throw)
@@ -102,6 +109,47 @@ data TagA = TagA { taga_name :: String
 data ListData a = ListData { list :: [a], pagenation :: [Pagenation] }
                   deriving (Show, Eq)
 
+data PostItem = PostItem { title :: String
+                         , body :: String
+                         , tags :: [PostTag]
+                         , private :: Bool
+                         , gist :: Bool
+                         , tweet :: Bool
+                         } deriving (Show, Eq)
+
+data PostTag = PostTag { post_tag_name :: String
+                       , post_tag_versions :: [String]
+                       } deriving (Show, Eq)
+
+data ItemUser = ItemUser { item_user_name :: String
+                         , item_user_url_name :: String
+                         , item_user_profile_image_url :: String
+                         } deriving (Show, Eq)
+data ItemTag = ItemTag { item_tag_name :: String
+                       , item_tag_url_name :: String
+                       , item_tag_icon_url :: String
+                       , item_tag_versions :: [String]
+                       } deriving (Show, Eq)
+data Item = Item { item_id :: Integer
+                 , item_uuid :: String
+                 , item_user :: ItemUser
+                 , item_title :: String
+                 , item_body :: String
+                 , item_created_at :: String -- TODO 相応しいデータ型
+                 , item_updated_at :: String -- TODO
+                 , item_created_at_in_words :: String
+                 , item_updated_at_in_words :: String
+                 , item_tags :: [ItemTag]
+                 , item_stock_count :: Integer
+                 , item_stock_users :: [String]
+                 , item_comment_count :: Integer
+                 , item_url :: String
+                 , item_gist_url :: Maybe String
+                 , item_tweet :: Bool
+                 , item_private :: Bool
+--                 , item_stocked :: Bool -- これはレスポンスのJSONに入ってこない
+                 } deriving (Show, Eq)
+
 {- ------------------------------------------
  - type alias.
 ------------------------------------------- -}
@@ -128,6 +176,20 @@ instance FromJSON Tag where
                             <*> v .: "follower_count"
   parseJSON _          = mzero
 
+instance ToJSON PostItem where
+  toJSON pi = object [
+                "title" .= title pi
+                , "body" .= body pi
+                , "tags" .= buildTags
+                , "private" .= private pi
+                , "gist" .= gist pi
+                , "tweet" .= tweet pi
+              ]
+    where
+      buildTags = V.fromList $ Prelude.map tagToObject $ tags pi
+      tagToObject tag = object [ "name" .= post_tag_name tag
+                               , "versions" .= (V.fromList $ post_tag_versions tag)
+                               ]
 instance FromJSON TagA where
   parseJSON (Object v) = TagA <$>
                             v .: "name"
@@ -136,6 +198,45 @@ instance FromJSON TagA where
                             <*> v .: "item_count"
                             <*> v .: "follower_count"
                             <*> v .: "following"
+  parseJSON _          = mzero
+
+{- ------------------------------------------
+ - ItemをJSONに変換するロジック.
+ - プロパティが多くなってきたときにこの表記法はかなりイヤなのだが、
+ - 他に良い書き方を調査する時間がない・・・
+------------------------------------------- -}
+instance FromJSON Item where
+  parseJSON (Object v) = Item <$>
+                         v .: "id"
+                         <*> v .: "uuid"
+                         <*> v .: "user"
+                         <*> v .: "title"
+                         <*> v .: "body"
+                         <*> v .: "created_at"
+                         <*> v .: "updated_at"
+                         <*> v .: "created_at_in_words"
+                         <*> v .: "updated_at_in_words"
+                         <*> v .: "tags"
+                         <*> v .: "stock_count"
+                         <*> v .: "stock_users"
+                         <*> v .: "comment_count"
+                         <*> v .: "url"
+                         <*> v .: "gist_url"
+                         <*> v .: "tweet"
+                         <*> v .: "private"
+  parseJSON _          = mzero
+instance FromJSON ItemUser where
+  parseJSON (Object v) = ItemUser <$>
+                         v .: "name"
+                         <*> v .: "url_name"
+                         <*> v .: "profile_image_url"
+  parseJSON _          = mzero
+instance FromJSON ItemTag where
+  parseJSON (Object v) = ItemTag <$>
+                         v .: "name"
+                         <*> v .: "url_name"
+                         <*> v .: "icon_url"
+                         <*> v .: "versions"
   parseJSON _          = mzero
 
 {- ------------------------------------------
@@ -148,6 +249,7 @@ rateLimitUrl = endpoint ++ "/rate_limit"
 userUrl = endpoint ++ "/user"
 usersUrl = endpoint ++ "/users"
 tagsUrl = endpoint ++ "/tags"
+itemsUrl = endpoint ++ "/items"
 
 {- ------------------------------------------
  - public functions.
@@ -260,6 +362,19 @@ getTagsAWithPage pagenation = do
   return $ ListData { list = tags, pagenation = ps }
 
 {- ------------------------------------------
+ - 投稿の実行
+ - TODO エラーは応答コードとX-Response-Body-Startヘッダを解釈する必要がありそう.
+------------------------------------------- -}
+postItem :: PostItem -> StateT QiitaContext IO (Either QiitaError Item)
+postItem item = do
+  ctx <- get
+  req <- parseUrl (itemsUrl  ++ (tok $ auth $ ctx))
+           >>= return . setRequestBodyJson item
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  return $ decodeJsonBody $ responseBody res
+
+{- ------------------------------------------
  - private functions.
 ------------------------------------------- -}
 
@@ -300,7 +415,9 @@ setRequestBodyJson :: (ToJSON j) => j -> Request m -> Request m
 setRequestBodyJson entity req = req {
                                   requestBody = RequestBodyLBS $ encode entity
                                   , method = "POST"
-                                  , requestHeaders = [("content-type","application/json")]
+                                  , requestHeaders = [ ("content-type","application/json")
+                                                     , ("user-agent","Jabara.Qiita/1.0")
+                                                     ]
                                 }
 
 parsePagenation :: Response b -> [Pagenation]
