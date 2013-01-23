@@ -35,7 +35,7 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runCore ctx) -- 認証OK後の処理
+        (\ctx -> evalStateT runCoreMats ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
@@ -107,6 +107,33 @@ runCore3 = do
   liftIO $ print $ responseBody res
   where
     getJson = B.readFile "post.json"
+
+runCoreMats :: StateT QiitaContext IO ()
+runCoreMats = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  items <- getItemsAFirstPage
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  items <- getItemsAFirstPagePerPage 2
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  items <- getItemsAWithPage (pagenation items !! 0)
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
 
 test = do
   cs <- LB.readFile "/Users/jabaraster/temp/temp2.txt"

@@ -13,6 +13,10 @@ module Jabara.Qiita (
   , getTagsAFirstPage
   , getTagsAFirstPage'
   , getTagsAWithPage
+  , getItemsFirstPage
+  , getItemsAFirstPage
+  , getItemsAFirstPagePerPage
+  , getItemsAWithPage
   , postItem
   , QiitaError(..)
   , Auth(..)
@@ -87,18 +91,18 @@ data QiitaContext = QiitaContext { auth :: Auth, rateLimit :: RateLimit }
                     deriving (Show, Eq, Generic)
 data Pagenation = Pagenation { pageRel :: ByteString, pageUrl :: ByteString }
                   deriving (Show, Eq)
--- 
+--
 -- 未認証な状態で取得可能なタグ情報.
--- 
+--
 data Tag = Tag { tag_name :: String
                  , tag_url_name :: String
                  , tag_icon_url :: String
                  , tag_item_count :: Int
                  , tag_follower_count :: Int
                } deriving (Show, Eq)
--- 
+--
 -- 認証済みユーザが取得可能なタグ情報.
--- 
+--
 data TagA = TagA { taga_name :: String
                  , taga_url_name :: String
                  , taga_icon_url :: String
@@ -171,7 +175,7 @@ instance FromJSON Tag where
   parseJSON (Object v) = Tag <$>
                             v .: "name"
                             <*> v .: "url_name"
-                            <*> v .: "icon_url" 
+                            <*> v .: "icon_url"
                             <*> v .: "item_count"
                             <*> v .: "follower_count"
   parseJSON _          = mzero
@@ -194,7 +198,7 @@ instance FromJSON TagA where
   parseJSON (Object v) = TagA <$>
                             v .: "name"
                             <*> v .: "url_name"
-                            <*> v .: "icon_url" 
+                            <*> v .: "icon_url"
                             <*> v .: "item_count"
                             <*> v .: "follower_count"
                             <*> v .: "following"
@@ -360,6 +364,50 @@ getTagsAWithPage pagenation = do
   let tags = fromJust $ decode $ responseBody res
   let ps = parsePagenation res
   return $ ListData { list = tags, pagenation = ps }
+
+-- mats' addition starts here
+{- ------------------------------------------
+ - 新着投稿を得るための一連の関数.
+------------------------------------------- -}
+
+getItemsFirstPage' :: PerPage -> IO (ListData Item, RateLimit)
+getItemsFirstPage' perPage = do
+  req <- parseUrl (itemsUrl ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getItemsFirstPage :: IO (ListData Item, RateLimit)
+getItemsFirstPage = getItemsFirstPage' defaultPerPage
+
+getItemsAFirstPage' :: PerPage -> StateT QiitaContext IO (ListData Item)
+getItemsAFirstPage' perPage = do
+  ctx <- get
+  req <- parseUrl (itemsUrl ++ (tok $ auth $ ctx) ++ "&per_page=" ++ (show perPage))
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list =items, pagenation = ps }
+
+getItemsAFirstPage :: StateT QiitaContext IO (ListData Item)
+getItemsAFirstPage = getItemsAFirstPage' defaultPerPage
+
+getItemsAFirstPagePerPage :: PerPage -> StateT QiitaContext IO (ListData Item)
+getItemsAFirstPagePerPage perPage = getItemsAFirstPage' perPage
+
+getItemsAWithPage :: Pagenation -> StateT QiitaContext IO (ListData Item)
+getItemsAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  ctx <- get
+  put $ ctx { rateLimit = parseRateLimit res }
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list = items, pagenation = ps }
+-- mats' addition ends here
 
 {- ------------------------------------------
  - 投稿の実行
