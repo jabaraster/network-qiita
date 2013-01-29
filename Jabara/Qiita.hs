@@ -19,6 +19,7 @@ module Jabara.Qiita (
   , getItemsAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
+  , getTagItemsWithPage
   , postItem
   , QiitaError(..)
   , Auth(..)
@@ -234,6 +235,9 @@ getItemsAWithPage pagenation = do
   return $ ListData { list = items, pagenation = ps }
 -- mats' addition ends here
 
+{- ------------------------------------------
+ - 特定タグの投稿を得るための一連の関数.
+------------------------------------------- -}
 getTagItemsFirstPage' :: TagName -> PerPage -> IO (ListData Item, RateLimit)
 getTagItemsFirstPage' tagName perPage = do
   req <- parseUrl (tagsUrl ++ "/" ++ C8.unpack tagName ++ "/items" ++ "?per_page=" ++ (show perPage))
@@ -244,7 +248,17 @@ getTagItemsFirstPage' tagName perPage = do
   return $ (ListData { list = items, pagenation = ps }, rateLimit)
 
 getTagItemsFirstPage :: TagName -> IO (ListData Item, RateLimit)
-getTagItemsFirstPage =  undefined
+getTagItemsFirstPage =  (flip getTagItemsFirstPage') defaultPerPage
+
+getTagItemsWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+getTagItemsWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
 {- ------------------------------------------
  - 投稿の実行
  - TODO エラーは応答コードとX-Response-Body-Startヘッダを解釈する必要がありそう.

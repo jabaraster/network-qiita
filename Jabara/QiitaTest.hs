@@ -35,7 +35,7 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runCorePostItem ctx) -- 認証OK後の処理
+        (\ctx -> evalStateT runGetTagItems ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
@@ -74,12 +74,12 @@ runCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 5. -----------------------------"
   tags' <- getTagsAWithPage (pagenation tags !! 0)
-  liftIO $ mapM_ (\l ->  print $ l) (list tags')
-  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags')
+  liftIO $ mapM_ print (list tags')
+  liftIO $ mapM_ print (pagenation tags')
 
 
-runCorePostItem :: StateT QiitaContext IO ()
-runCorePostItem = do
+runPostItem :: StateT QiitaContext IO ()
+runPostItem = do
   let newItem = PostItem { title = "Qiita API on Haskell"
                          , body = "Qiita API on Haskell"
                          , tags = [ PostTag "Haskell" [] ]
@@ -116,8 +116,26 @@ runCoreMats = do
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-runCoreGetTagItems :: StateT QiitaContext IO ()
-runCoreGetTagItems = do
-  items <- liftIO $ getTagItemsFirstPage' "Haskell" 10
-  liftIO $ mapM_ print (list $ fst items)
+runGetTagItems :: StateT QiitaContext IO ()
+runGetTagItems = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ getTagItemsFirstPage "Haskell"
+  let items1 = fst itemList1
+  liftIO $ mapM_ print (list items1)
+  liftIO $ mapM_ print (pagenation items1)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ getTagItemsFirstPage' "Haskell" 10
+  let items2 = fst itemList2
+  liftIO $ mapM_ print (list items2)
+  liftIO $ mapM_ print (pagenation items2)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ getTagItemsWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ print (list items3)
+  liftIO $ mapM_ print (pagenation items3)
 
