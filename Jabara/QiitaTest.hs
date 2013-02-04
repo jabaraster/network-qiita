@@ -35,7 +35,14 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runUpdateItem ctx) -- 認証OK後の処理
+        (\ctx -> evalStateT runCoreMats ctx) -- 認証OK後の処理
+
+{- ------------------------------------------
+ - 認証なし実行.
+------------------------------------------- -}
+run2 :: IO ()
+run2 = do
+  runCoreMats2
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
@@ -115,6 +122,26 @@ runCoreMats = do
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runCoreMats2 :: IO ()
+runCoreMats2 = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  items <- getItemsFirstPage
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  items <- getItemsFirstPagePerPage 5
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  items <- getItemsWithPage (pagenation items !! 0)
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
 
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do

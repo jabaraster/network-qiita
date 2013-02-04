@@ -14,6 +14,8 @@ module Jabara.Qiita (
   , getTagsAFirstPage'
   , getTagsAWithPage
   , getItemsFirstPage
+  , getItemsFirstPagePerPage
+  , getItemsWithPage
   , getItemsAFirstPage
   , getItemsAFirstPagePerPage
   , getItemsAWithPage
@@ -199,17 +201,28 @@ getTagsAWithPage pagenation = do
  - 新着投稿を得るための一連の関数.
 ------------------------------------------- -}
 
-getItemsFirstPage' :: PerPage -> IO (ListData Item, RateLimit)
+getItemsFirstPage' :: PerPage -> IO (ListData Item)
 getItemsFirstPage' perPage = do
   req <- parseUrl (itemsUrl ++ "?per_page=" ++ (show perPage))
   res <- doRequest req
   let rateLimit = parseRateLimit res
   let items = fromJust $ decode $ responseBody res
   let ps = parsePagenation res
-  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+  return $ (ListData { list = items, pagenation = ps })
 
-getItemsFirstPage :: IO (ListData Item, RateLimit)
+getItemsFirstPage :: IO (ListData Item)
 getItemsFirstPage = getItemsFirstPage' defaultPerPage
+
+getItemsFirstPagePerPage :: PerPage -> IO (ListData Item)
+getItemsFirstPagePerPage perPage = getItemsFirstPage' perPage
+
+getItemsWithPage :: Pagenation -> IO (ListData Item)
+getItemsWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list = items, pagenation = ps }
 
 getItemsAFirstPage' :: PerPage -> StateT QiitaContext IO (ListData Item)
 getItemsAFirstPage' perPage = do
