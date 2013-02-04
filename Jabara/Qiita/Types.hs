@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Jabara.Qiita.Types (
   QiitaError(..)
@@ -8,6 +9,7 @@ module Jabara.Qiita.Types (
   , Tag(..)
   , TagA(..)
   , PostItem(..)
+  , UpdateItem(..)
   , PostTag(..)
   , QiitaContext(..)
   , Pagenation(..)
@@ -19,6 +21,7 @@ module Jabara.Qiita.Types (
   , Password
   , PerPage
   , TagName
+  , itemToUpdateItem
   ) where
 
 import Control.Applicative ((<*>), (<|>), (<$>))
@@ -38,21 +41,21 @@ data Auth = Auth { token :: String }
             deriving (Show, Eq, Generic)
 data RateLimit = RateLimit {remaining :: Int, limit :: Int }
                  deriving (Show, Eq, Generic)
-data User = User { name :: String
-                 , url_name :: String
-                 , profile_image_url :: String
-                 , url :: String
-                 , description :: String
-                 , website_url :: String
-                 , organization :: String
-                 , location :: String
-                 , facebook :: String
-                 , linkedin :: String
-                 , twitter :: String
-                 , github :: String
-                 , followers :: Int
-                 , following_users :: Int
-                 , items :: Int
+data User = User { user_name :: String
+                 , user_url_name :: String
+                 , user_profile_image_url :: String
+                 , user_url :: String
+                 , user_description :: String
+                 , user_website_url :: String
+                 , user_organization :: String
+                 , user_location :: String
+                 , user_facebook :: String
+                 , user_linkedin :: String
+                 , user_twitter :: String
+                 , user_github :: String
+                 , user_followers :: Int
+                 , user_following_users :: Int
+                 , user_items :: Int
                  } deriving (Show, Eq, Generic)
 data QiitaContext = QiitaContext { auth :: Auth, rateLimit :: RateLimit }
                     deriving (Show, Eq, Generic)
@@ -62,10 +65,10 @@ data Pagenation = Pagenation { pageRel :: BS.ByteString, pageUrl :: BS.ByteStrin
 -- 未認証な状態で取得可能なタグ情報.
 --
 data Tag = Tag { tag_name :: String
-                 , tag_url_name :: String
-                 , tag_icon_url :: String
-                 , tag_item_count :: Int
-                 , tag_follower_count :: Int
+               , tag_url_name :: String
+               , tag_icon_url :: String
+               , tag_item_count :: Int
+               , tag_follower_count :: Int
                } deriving (Show, Eq)
 --
 -- 認証済みユーザが取得可能なタグ情報.
@@ -76,17 +79,24 @@ data TagA = TagA { taga_name :: String
                  , taga_item_count :: Int
                  , taga_follower_count :: Int
                  , taga_following :: Bool
-               } deriving (Show, Eq)
+                 } deriving (Show, Eq)
 data ListData a = ListData { list :: [a], pagenation :: [Pagenation] }
                   deriving (Show, Eq)
 
-data PostItem = PostItem { title :: String
-                         , body :: String
-                         , tags :: [PostTag]
-                         , private :: Bool
-                         , gist :: Bool
-                         , tweet :: Bool
+data PostItem = PostItem { post_item_title :: String
+                         , post_item_body :: String
+                         , post_item_tags :: [PostTag]
+                         , post_item_private :: Bool
+                         , post_item_gist :: Bool
+                         , post_item_tweet :: Bool
                          } deriving (Show, Eq)
+
+data UpdateItem = UpdateItem { update_item_uuid :: String
+                             , update_item_title :: String
+                             , update_item_tags :: [PostTag]
+                             , update_item_body :: String
+                             , update_item_private :: Bool
+                             } deriving (Show, Eq)
 
 data PostTag = PostTag { post_tag_name :: String
                        , post_tag_versions :: [String]
@@ -149,19 +159,21 @@ instance FromJSON Tag where
   parseJSON _          = mzero
 
 instance ToJSON PostItem where
-  toJSON pi = object [
-                "title" .= title pi
-                , "body" .= body pi
-                , "tags" .= buildTags
-                , "private" .= private pi
-                , "gist" .= gist pi
-                , "tweet" .= tweet pi
-              ]
-    where
-      buildTags = V.fromList $ Prelude.map tagToObject $ tags pi
-      tagToObject tag = object [ "name" .= post_tag_name tag
-                               , "versions" .= (V.fromList $ post_tag_versions tag)
-                               ]
+  toJSON pi = object [ "title" .= post_item_title pi
+                     , "body" .= post_item_body pi
+                     , "tags" .= (buildTags $ post_item_tags pi)
+                     , "private" .= post_item_private pi
+                     , "gist" .= post_item_gist pi
+                     , "tweet" .= post_item_tweet pi
+                     ]
+
+instance ToJSON UpdateItem where
+  toJSON ui = object [ "title" .= update_item_title ui
+                     , "tags" .= (buildTags $ update_item_tags ui)
+                     , "body" .= update_item_body ui
+                     , "private" .= update_item_private ui
+                     ]
+
 instance FromJSON TagA where
   parseJSON (Object v) = TagA <$>
                             v .: "name"
@@ -210,3 +222,30 @@ instance FromJSON ItemTag where
                          <*> v .: "icon_url"
                          <*> v .: "versions"
   parseJSON _          = mzero
+
+{- ------------------------------------------
+ - 型変換用関数
+------------------------------------------- -}
+itemToUpdateItem :: Item -> UpdateItem
+itemToUpdateItem item = UpdateItem {
+                          update_item_uuid = item_uuid item
+                          , update_item_title = item_title item
+                          , update_item_tags = map itemTagToPostTag $ item_tags item
+                          , update_item_body = item_body item
+                          , update_item_private = item_private item
+                        }
+  where
+    itemTagToPostTag itemTag = PostTag {
+                                 post_tag_name = item_tag_name itemTag
+                                 , post_tag_versions = item_tag_versions itemTag
+                               }
+
+{- ------------------------------------------
+ - Private functions.
+------------------------------------------- -}
+buildTags tags = V.fromList $ Prelude.map tagToObject tags
+  where
+    tagToObject tag = object [ "name" .= post_tag_name tag
+                             , "versions" .= (V.fromList $ post_tag_versions tag)
+                             ]
+

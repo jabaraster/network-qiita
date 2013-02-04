@@ -35,7 +35,7 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runGetTagItems ctx) -- 認証OK後の処理
+        (\ctx -> evalStateT runUpdateItem ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
@@ -80,12 +80,12 @@ runCore = do
 
 runPostItem :: StateT QiitaContext IO ()
 runPostItem = do
-  let newItem = PostItem { title = "Qiita API on Haskell"
-                         , body = "Qiita API on Haskell"
-                         , tags = [ PostTag "Haskell" [] ]
-                         , private = True
-                         , gist = False
-                         , tweet = False
+  let newItem = PostItem { post_item_title = "Qiita API on Haskell"
+                         , post_item_body = "Qiita API on Haskell"
+                         , post_item_tags = [ PostTag "Haskell" [] ]
+                         , post_item_private = True
+                         , post_item_gist = False
+                         , post_item_tweet = False
                          }
   item <- postItem newItem
   liftIO $ print item
@@ -138,4 +138,24 @@ runGetTagItems = do
   let items3 = fst itemList3
   liftIO $ mapM_ print (list items3)
   liftIO $ mapM_ print (pagenation items3)
+
+runUpdateItem :: StateT QiitaContext IO ()
+runUpdateItem = do
+  let newItem = PostItem { post_item_title = "Qiita API on Haskell"
+                         , post_item_body = "Qiita API on Haskell"
+                         , post_item_tags = [ PostTag "Haskell" [] ]
+                         , post_item_private = True
+                         , post_item_gist = False
+                         , post_item_tweet = False
+                         }
+  postedS <- postItem newItem
+
+  case postedS of
+    Left     err -> liftIO $ print err
+    Right posted -> do
+      let updated = itemToUpdateItem posted
+      updatedS <- updateItem updated {
+                    update_item_title = "Updated Item."
+                  }
+      liftIO $ print updatedS
 

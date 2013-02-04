@@ -21,6 +21,7 @@ module Jabara.Qiita (
   , getTagItemsFirstPage
   , getTagItemsWithPage
   , postItem
+  , updateItem
   , QiitaError(..)
   , Auth(..)
   , RateLimit(..)
@@ -28,6 +29,7 @@ module Jabara.Qiita (
   , Tag(..)
   , TagA(..)
   , PostItem(..)
+  , UpdateItem(..)
   , PostTag(..)
   , QiitaContext(..)
   , Pagenation(..)
@@ -38,6 +40,7 @@ module Jabara.Qiita (
   , UserName
   , Password
   , PerPage
+  , itemToUpdateItem
 -- for test
 --  , setRequestBodyJson
 --  , doRequest
@@ -234,6 +237,7 @@ getItemsAWithPage pagenation = do
   let ps = parsePagenation res
   return $ ListData { list = items, pagenation = ps }
 -- mats' addition ends here
+-- test
 
 {- ------------------------------------------
  - 特定タグの投稿を得るための一連の関数.
@@ -268,6 +272,15 @@ postItem item = do
   ctx <- get
   req <- parseUrl (itemsUrl  ++ (tok $ auth $ ctx))
            >>= return . setRequestBodyJson item
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  return $ decodeJsonBody $ responseBody res
+
+updateItem :: UpdateItem -> StateT QiitaContext IO (Either QiitaError Item)
+updateItem item = do
+  ctx <- get
+  req <- parseUrl (itemsUrl ++ "/" ++ (update_item_uuid item) ++ (tok $ auth $ ctx))
+           >>= return . setRequestBodyJson' methodPut item
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ decodeJsonBody $ responseBody res
@@ -312,11 +325,20 @@ lookupIntValue headerName headers = case lookup headerName headers of
 setRequestBodyJson :: (ToJSON j) => j -> Request m -> Request m
 setRequestBodyJson entity req = req {
                                   requestBody = RequestBodyLBS $ encode entity
-                                  , method = "POST"
+                                  , method = methodPost
                                   , requestHeaders = [ ("content-type","application/json")
                                                      , ("user-agent","Jabara.Qiita/1.0")
                                                      ]
                                 }
+
+setRequestBodyJson' :: (ToJSON j) => Method -> j -> Request m -> Request m
+setRequestBodyJson' method entity req = req {
+                                          requestBody = RequestBodyLBS $ encode entity
+                                          , method = method
+                                          , requestHeaders = [ ("content-type","application/json")
+                                              , ("user-agent","Jabara.Qiita/1.0")
+                                            ]
+                                        }
 
 parsePagenation :: Response b -> [Pagenation]
 parsePagenation res = case lookup "Link" $ responseHeaders res of
