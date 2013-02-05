@@ -21,6 +21,7 @@ module Jabara.Qiita.Types (
   , Password
   , PerPage
   , TagName
+  , ItemUuid
   , itemToUpdateItem
   ) where
 
@@ -137,6 +138,7 @@ type UserName = BS.ByteString
 type Password = BS.ByteString
 type PerPage = Int
 type TagName = BS.ByteString
+type ItemUuid = BS.ByteString
 
 {- ------------------------------------------
  - instance difinitions.

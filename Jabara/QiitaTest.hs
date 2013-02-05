@@ -35,7 +35,7 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runGetStocks ctx) -- 認証OK後の処理
+       (\ctx -> evalStateT runGetStocks ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - 認証なし実行.
@@ -192,8 +192,21 @@ runGetTagItems = do
   liftIO $ mapM_ print (list items3)
   liftIO $ mapM_ print (pagenation items3)
 
-runUpdateItem :: StateT QiitaContext IO ()
+runUpdateItem :: IO ()
 runUpdateItem = do
+  putStrLn "ユーザ名を入力してEnter、次にパスワードを入力してEnterを押すこと！"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runUpdateItemCore ctx) -- 認証OK後の処理
+
+runUpdateItemCore :: StateT QiitaContext IO ()
+runUpdateItemCore = do
   let newItem = PostItem { post_item_title = "Qiita API on Haskell"
                          , post_item_body = "Qiita API on Haskell"
                          , post_item_tags = [ PostTag "Haskell" [] ]
@@ -211,4 +224,23 @@ runUpdateItem = do
                     update_item_title = "Updated Item."
                   }
       liftIO $ print updatedS
+
+runDeleteItem :: IO ()
+runDeleteItem = do
+  putStrLn "ユーザ名を入力してEnter、次にパスワードを入力してEnter、最後に削除したい投稿のUUIDを入力してEnterを押すこと！"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+  let uuid = C8.pack $ lines !! 2
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT (runDeleteItemCore uuid) ctx) -- 認証OK後の処理
+
+runDeleteItemCore :: B.ByteString -> StateT QiitaContext IO ()
+runDeleteItemCore uuid = do
+  deleteItem uuid
+  return ()
 

@@ -27,6 +27,7 @@ module Jabara.Qiita (
   , getTagItemsWithPage
   , postItem
   , updateItem
+  , deleteItem
   , QiitaError(..)
   , Auth(..)
   , RateLimit(..)
@@ -45,6 +46,7 @@ module Jabara.Qiita (
   , UserName
   , Password
   , PerPage
+  , ItemUuid
   , itemToUpdateItem
 -- for test
 --  , setRequestBodyJson
@@ -320,6 +322,9 @@ postItem item = do
   put $ ctx { rateLimit = parseRateLimit res }
   return $ decodeJsonBody $ responseBody res
 
+{- ------------------------------------------
+ - 投稿の更新
+------------------------------------------- -}
 updateItem :: UpdateItem -> StateT QiitaContext IO (Either QiitaError Item)
 updateItem item = do
   ctx <- get
@@ -328,6 +333,22 @@ updateItem item = do
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ decodeJsonBody $ responseBody res
+
+{- ------------------------------------------
+ - 投稿の削除
+------------------------------------------- -}
+deleteItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
+deleteItem uuid = do
+  ctx <- get
+  req <- parseUrl (itemsUrl ++ "/" ++ (C8.unpack uuid) ++ (tok $ auth $ ctx))
+           >>= \r -> return $ r { method = methodDelete
+                                 , requestHeaders = [ ("content-type","application/json")
+                                                    , ("user-agent","Jabara.Qiita/1.0")
+                                                    ]
+                                 }
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  return $ Right ()
 
 {- ------------------------------------------
  - private functions.
@@ -341,7 +362,7 @@ checkStatus' status headers
 
 decodeJsonBody :: (FromJSON a) => LBS.ByteString -> Either QiitaError a
 decodeJsonBody body = case decode body of
-  Just auth -> Right auth
+  Just ret -> Right ret
   Nothing   -> case (decode body :: Maybe QiitaError) of
                  Nothing -> Left $ QiitaError { errorMessage = "Unknown Error." }
                  Just e  -> Left e
