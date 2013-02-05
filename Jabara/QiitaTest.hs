@@ -35,14 +35,14 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-        (\ctx -> evalStateT runCoreMats ctx) -- 認証OK後の処理
+        (\ctx -> evalStateT runGetStocks ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - 認証なし実行.
 ------------------------------------------- -}
 run2 :: IO ()
 run2 = do
-  runCoreMats2
+  runGetItems2
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
@@ -97,8 +97,8 @@ runPostItem = do
   item <- postItem newItem
   liftIO $ print item
 
-runCoreMats :: StateT QiitaContext IO ()
-runCoreMats = do
+runGetItems :: StateT QiitaContext IO ()
+runGetItems = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
   items <- getItemsAFirstPage
@@ -123,8 +123,8 @@ runCoreMats = do
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-runCoreMats2 :: IO ()
-runCoreMats2 = do
+runGetItems2 :: IO ()
+runGetItems2 = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
   items <- getItemsFirstPage
@@ -142,6 +142,32 @@ runCoreMats2 = do
   items <- getItemsWithPage (pagenation items !! 0)
   liftIO $ mapM_ (\l ->  print $ l) (list items)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+
+runGetStocks :: StateT QiitaContext IO ()
+runGetStocks = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  items <- getStocksAFirstPage
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  items <- getStocksAFirstPagePerPage 2
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  items <- getStocksAWithPage (pagenation items !! 0)
+  liftIO $ mapM_ (\l ->  print $ l) (list items)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do

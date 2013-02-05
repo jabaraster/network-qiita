@@ -19,6 +19,9 @@ module Jabara.Qiita (
   , getItemsAFirstPage
   , getItemsAFirstPagePerPage
   , getItemsAWithPage
+  , getStocksAFirstPage
+  , getStocksAFirstPagePerPage
+  , getStocksAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
   , getTagItemsWithPage
@@ -85,6 +88,7 @@ userUrl = endpoint ++ "/user"
 usersUrl = endpoint ++ "/users"
 tagsUrl = endpoint ++ "/tags"
 itemsUrl = endpoint ++ "/items"
+stocksUrl = endpoint ++ "/stocks"
 
 {- ------------------------------------------
  - public functions.
@@ -196,7 +200,6 @@ getTagsAWithPage pagenation = do
   let ps = parsePagenation res
   return $ ListData { list = tags, pagenation = ps }
 
--- mats' addition starts here
 {- ------------------------------------------
  - 新着投稿を得るための一連の関数.
 ------------------------------------------- -}
@@ -249,8 +252,36 @@ getItemsAWithPage pagenation = do
   let items = fromJust $ decode $ responseBody res
   let ps = parsePagenation res
   return $ ListData { list = items, pagenation = ps }
--- mats' addition ends here
--- test
+
+{- ------------------------------------------
+ - 自分のストックした投稿を得るための一連の関数.
+------------------------------------------- -}
+
+getStocksAFirstPage' :: PerPage -> StateT QiitaContext IO (ListData Item)
+getStocksAFirstPage' perPage = do
+  ctx <- get
+  req <- parseUrl (stocksUrl ++ (tok $ auth $ ctx) ++ "&per_page=" ++ (show perPage))
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list =items, pagenation = ps }
+
+getStocksAFirstPage :: StateT QiitaContext IO (ListData Item)
+getStocksAFirstPage = getStocksAFirstPage' defaultPerPage
+
+getStocksAFirstPagePerPage :: PerPage -> StateT QiitaContext IO (ListData Item)
+getStocksAFirstPagePerPage perPage = getStocksAFirstPage' perPage
+
+getStocksAWithPage :: Pagenation -> StateT QiitaContext IO (ListData Item)
+getStocksAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  ctx <- get
+  put $ ctx { rateLimit = parseRateLimit res }
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ ListData { list = items, pagenation = ps }
 
 {- ------------------------------------------
  - 特定タグの投稿を得るための一連の関数.
