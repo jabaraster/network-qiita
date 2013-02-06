@@ -314,7 +314,6 @@ getFollowingTagsFirstPage' userName perPage = do
   res <- doRequest req
   let rateLimit = parseRateLimit res
   let tags = fromJust $ decode $ responseBody res
-  Prelude.putStrLn $ show $ responseBody res
   let ps = parsePagenation res
   return $ (ListData { list = tags, pagenation = ps }, rateLimit)
 

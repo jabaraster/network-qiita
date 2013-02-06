@@ -247,7 +247,7 @@ runGetFollowingTagsCore2 = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  tagList2 <- liftIO $ getFollowingTagsFirstPage' "gishi_yama" 5
+  tagList2 <- liftIO $ getFollowingTagsFirstPage' "gishi_yama" 2
   let tags2 = fst tagList2
   liftIO $ mapM_ (\l ->  print $ l) (list tags2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags2)
