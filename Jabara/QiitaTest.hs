@@ -244,3 +244,41 @@ runDeleteItemCore uuid = do
   deleteItem uuid
   return ()
 
+runStockItem :: IO ()
+runStockItem = do
+  putStrLn "ユーザ名を入力してEnter、次にパスワードを入力してEnter、最後にストックしたい投稿のUUIDを入力してEnterを押すこと！"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+  let uuid = C8.pack $ lines !! 2
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT (runStockItemCore uuid) ctx) -- 認証OK後の処理
+
+runStockItemCore :: ItemUuid -> StateT QiitaContext IO ()
+runStockItemCore uuid = do
+  stockItem uuid
+  return ()
+
+runUnstockItem :: IO ()
+runUnstockItem = do
+  putStrLn "ユーザ名を入力してEnter、次にパスワードを入力してEnter、最後にストック解除したい投稿のUUIDを入力してEnterを押すこと！"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+  let uuid = C8.pack $ lines !! 2
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT (runUnstockItemCore uuid) ctx) -- 認証OK後の処理
+
+runUnstockItemCore :: ItemUuid -> StateT QiitaContext IO ()
+runUnstockItemCore uuid = do
+  unstockItem uuid
+  return ()
+

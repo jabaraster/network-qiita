@@ -28,6 +28,8 @@ module Jabara.Qiita (
   , postItem
   , updateItem
   , deleteItem
+  , stockItem
+  , unstockItem
   , QiitaError(..)
   , Auth(..)
   , RateLimit(..)
@@ -341,11 +343,31 @@ deleteItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 deleteItem uuid = do
   ctx <- get
   req <- parseUrl (itemsUrl ++ "/" ++ (C8.unpack uuid) ++ (tok $ auth $ ctx))
-           >>= \r -> return $ r { method = methodDelete
-                                 , requestHeaders = [ ("content-type","application/json")
-                                                    , ("user-agent","Jabara.Qiita/1.0")
-                                                    ]
-                                 }
+           >>= \r -> return $ r { method = methodDelete }
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  return $ Right ()
+
+{- ------------------------------------------
+ - 投稿のストック
+------------------------------------------- -}
+stockItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
+stockItem uuid = do
+  ctx <- get
+  req <- parseUrl (buildStockUrl uuid ctx)
+           >>= \r -> return $ r { method = methodPut }
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
+  return $ Right ()
+
+{- ------------------------------------------
+ - 投稿のストック解除
+------------------------------------------- -}
+unstockItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
+unstockItem uuid = do
+  ctx <- get
+  req <- parseUrl (buildStockUrl uuid ctx)
+           >>= \r -> return $ r { method = methodDelete }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -432,3 +454,5 @@ onePagenationParser = do
   P.try (P.string "\"," >> P.spaces) P.<|> P.spaces
   return $ Pagenation { pageUrl = C8.pack url, pageRel = C8.pack rel }
 
+buildStockUrl :: ItemUuid -> QiitaContext -> String
+buildStockUrl uuid ctx = itemsUrl ++ "/" ++ (C8.unpack uuid) ++ "/stock" ++ (tok $ auth $ ctx)
