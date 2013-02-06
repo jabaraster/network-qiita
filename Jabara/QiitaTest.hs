@@ -35,14 +35,7 @@ run = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-       (\ctx -> evalStateT runGetStocks ctx) -- 認証OK後の処理
-
-{- ------------------------------------------
- - 認証なし実行.
-------------------------------------------- -}
-run2 :: IO ()
-run2 = do
-  runGetItems2
+       (\ctx -> evalStateT runCore ctx) -- 認証OK後の処理
 
 {- ------------------------------------------
  - Qiitaにアクセスする、主処理.
@@ -97,8 +90,24 @@ runPostItem = do
   item <- postItem newItem
   liftIO $ print item
 
-runGetItems :: StateT QiitaContext IO ()
+runGetItems :: IO ()
 runGetItems = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runGetItemsCore ctx) -- 認証OK後の処理
+
+  -- 認証なし実行
+  runGetItemsCore2
+
+runGetItemsCore :: StateT QiitaContext IO ()
+runGetItemsCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
   items <- getItemsAFirstPage
@@ -109,7 +118,7 @@ runGetItems = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  items <- getItemsAFirstPagePerPage 2
+  items <- getItemsAFirstPage' 2
   liftIO $ mapM_ (\l ->  print $ l) (list items)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
   ctx2 <- get
@@ -123,8 +132,8 @@ runGetItems = do
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-runGetItems2 :: IO ()
-runGetItems2 = do
+runGetItemsCore2 :: IO ()
+runGetItemsCore2 = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
   items <- getItemsFirstPage
@@ -133,7 +142,7 @@ runGetItems2 = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  items <- getItemsFirstPagePerPage 5
+  items <- getItemsFirstPage' 5
   liftIO $ mapM_ (\l ->  print $ l) (list items)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
 
@@ -143,8 +152,21 @@ runGetItems2 = do
   liftIO $ mapM_ (\l ->  print $ l) (list items)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
 
-runGetStocks :: StateT QiitaContext IO ()
+runGetStocks :: IO ()
 runGetStocks = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runGetStocksCore ctx) -- 認証OK後の処理
+
+runGetStocksCore :: StateT QiitaContext IO ()
+runGetStocksCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
   items <- getStocksAFirstPage
@@ -155,7 +177,7 @@ runGetStocks = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  items <- getStocksAFirstPagePerPage 2
+  items <- getStocksAFirstPage' 2
   liftIO $ mapM_ (\l ->  print $ l) (list items)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
   ctx2 <- get
@@ -168,6 +190,74 @@ runGetStocks = do
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items)
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runGetFollowingTags :: IO ()
+runGetFollowingTags = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runGetFollowingTagsCore ctx) -- 認証OK後の処理
+
+  -- 認証なし実行
+  runGetFollowingTagsCore2
+
+runGetFollowingTagsCore :: StateT QiitaContext IO ()
+runGetFollowingTagsCore = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  tagList1 <- liftIO $ getFollowingTagsAFirstPage "gishi_yama"
+  let tags1 = fst tagList1
+  liftIO $ mapM_ (\l ->  print $ l) (list tags1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags1)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  tagList2 <- liftIO $ getFollowingTagsAFirstPage' "gishi_yama" 2
+  let tags2 = fst tagList2
+  liftIO $ mapM_ (\l ->  print $ l) (list tags2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags2)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  tagList3 <- liftIO $ getFollowingTagsAWithPage (pagenation tags2 !! 0)
+  let tags3 = fst tagList3
+  liftIO $ mapM_ (\l ->  print $ l) (list tags3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags3)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runGetFollowingTagsCore2 :: IO ()
+runGetFollowingTagsCore2 = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  tagList1 <- liftIO $ getFollowingTagsFirstPage "gishi_yama"
+  let tags1 = fst tagList1
+  liftIO $ mapM_ (\l ->  print $ l) (list tags1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags1)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  tagList2 <- liftIO $ getFollowingTagsFirstPage' "gishi_yama" 5
+  let tags2 = fst tagList2
+  liftIO $ mapM_ (\l ->  print $ l) (list tags2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags2)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  tagList3 <- liftIO $ getFollowingTagsWithPage (pagenation tags2 !! 0)
+  let tags3 = fst tagList3
+  liftIO $ mapM_ (\l ->  print $ l) (list tags3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation tags3)
 
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do

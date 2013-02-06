@@ -8,6 +8,7 @@ module Jabara.Qiita.Types (
   , User(..)
   , Tag(..)
   , TagA(..)
+  , FollowingTag(..)
   , PostItem(..)
   , UpdateItem(..)
   , PostTag(..)
@@ -81,6 +82,14 @@ data TagA = TagA { taga_name :: String
                  , taga_follower_count :: Int
                  , taga_following :: Bool
                  } deriving (Show, Eq)
+--
+-- 特定のユーザーがフォローしているタグ情報.
+--
+data FollowingTag = FollowingTag { following_tag_name :: String
+                 , following_tag_url_name :: String
+                 , following_tag_icon_url :: String
+                 } deriving (Show, Eq)
+
 data ListData a = ListData { list :: [a], pagenation :: [Pagenation] }
                   deriving (Show, Eq)
 
@@ -184,6 +193,13 @@ instance FromJSON TagA where
                             <*> v .: "item_count"
                             <*> v .: "follower_count"
                             <*> v .: "following"
+  parseJSON _          = mzero
+
+instance FromJSON FollowingTag where
+  parseJSON (Object v) = FollowingTag <$>
+                            v .: "name"
+                            <*> v .: "url_name"
+                            <*> v .: "icon_url"
   parseJSON _          = mzero
 
 {- ------------------------------------------

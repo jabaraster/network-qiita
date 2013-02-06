@@ -13,15 +13,21 @@ module Jabara.Qiita (
   , getTagsAFirstPage
   , getTagsAFirstPage'
   , getTagsAWithPage
+  , getItemsFirstPage'
   , getItemsFirstPage
-  , getItemsFirstPagePerPage
   , getItemsWithPage
+  , getItemsAFirstPage'
   , getItemsAFirstPage
-  , getItemsAFirstPagePerPage
   , getItemsAWithPage
+  , getStocksAFirstPage'
   , getStocksAFirstPage
-  , getStocksAFirstPagePerPage
   , getStocksAWithPage
+  , getFollowingTagsFirstPage'
+  , getFollowingTagsFirstPage
+  , getFollowingTagsWithPage
+  , getFollowingTagsAFirstPage'
+  , getFollowingTagsAFirstPage
+  , getFollowingTagsAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
   , getTagItemsWithPage
@@ -218,9 +224,6 @@ getItemsFirstPage' perPage = do
 getItemsFirstPage :: IO (ListData Item)
 getItemsFirstPage = getItemsFirstPage' defaultPerPage
 
-getItemsFirstPagePerPage :: PerPage -> IO (ListData Item)
-getItemsFirstPagePerPage perPage = getItemsFirstPage' perPage
-
 getItemsWithPage :: Pagenation -> IO (ListData Item)
 getItemsWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
@@ -241,9 +244,6 @@ getItemsAFirstPage' perPage = do
 
 getItemsAFirstPage :: StateT QiitaContext IO (ListData Item)
 getItemsAFirstPage = getItemsAFirstPage' defaultPerPage
-
-getItemsAFirstPagePerPage :: PerPage -> StateT QiitaContext IO (ListData Item)
-getItemsAFirstPagePerPage perPage = getItemsAFirstPage' perPage
 
 getItemsAWithPage :: Pagenation -> StateT QiitaContext IO (ListData Item)
 getItemsAWithPage pagenation = do
@@ -272,9 +272,6 @@ getStocksAFirstPage' perPage = do
 getStocksAFirstPage :: StateT QiitaContext IO (ListData Item)
 getStocksAFirstPage = getStocksAFirstPage' defaultPerPage
 
-getStocksAFirstPagePerPage :: PerPage -> StateT QiitaContext IO (ListData Item)
-getStocksAFirstPagePerPage perPage = getStocksAFirstPage' perPage
-
 getStocksAWithPage :: Pagenation -> StateT QiitaContext IO (ListData Item)
 getStocksAWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
@@ -284,6 +281,52 @@ getStocksAWithPage pagenation = do
   let items = fromJust $ decode $ responseBody res
   let ps = parsePagenation res
   return $ ListData { list = items, pagenation = ps }
+
+{- -----------------------------------------------------------
+ - 特定のユーザーがフォローしているタグを得るための一連の関数.
+------------------------------------------------------------ -}
+getFollowingTagsAFirstPage' :: UserName -> PerPage -> IO (ListData FollowingTag, RateLimit)
+getFollowingTagsAFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_tags" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = tags, pagenation = ps }, rateLimit)
+
+getFollowingTagsAFirstPage :: UserName -> IO (ListData FollowingTag, RateLimit)
+getFollowingTagsAFirstPage =  (flip getFollowingTagsAFirstPage') defaultPerPage
+
+getFollowingTagsAWithPage :: Pagenation -> IO (ListData FollowingTag, RateLimit)
+getFollowingTagsAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = tags, pagenation = ps }, rateLimit)
+
+getFollowingTagsFirstPage' :: UserName -> PerPage -> IO (ListData FollowingTag, RateLimit)
+getFollowingTagsFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_tags" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let tags = fromJust $ decode $ responseBody res
+  Prelude.putStrLn $ show $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = tags, pagenation = ps }, rateLimit)
+
+getFollowingTagsFirstPage :: UserName -> IO (ListData FollowingTag, RateLimit)
+getFollowingTagsFirstPage =  (flip getFollowingTagsFirstPage') defaultPerPage
+
+getFollowingTagsWithPage :: Pagenation -> IO (ListData FollowingTag, RateLimit)
+getFollowingTagsWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let tags = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = tags, pagenation = ps }, rateLimit)
 
 {- ------------------------------------------
  - 特定タグの投稿を得るための一連の関数.
