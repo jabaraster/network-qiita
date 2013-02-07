@@ -327,6 +327,74 @@ runGetFollowingUsersCore2 = do
   liftIO $ mapM_ (\l ->  print $ l) (list users3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users3)
 
+runGetUserStocks :: IO ()
+runGetUserStocks = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runGetUserStocksCore ctx) -- 認証OK後の処理
+
+  -- 認証なし実行
+  runGetUserStocksCore2
+
+runGetUserStocksCore :: StateT QiitaContext IO ()
+runGetUserStocksCore = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ getUserStocksAFirstPage "matscity@github"
+  let items1 = fst itemList1
+  liftIO $ mapM_ (\l ->  print $ l) (list items1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ getUserStocksAFirstPage' "matscity@github" 2
+  let items2 = fst itemList2
+  liftIO $ mapM_ (\l ->  print $ l) (list items2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ getUserStocksAWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ (\l ->  print $ l) (list items3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runGetUserStocksCore2 :: IO ()
+runGetUserStocksCore2 = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ getUserStocksFirstPage "jabaraster"
+  let items1 = fst itemList1
+  liftIO $ mapM_ (\l ->  print $ l) (list items1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ getUserStocksFirstPage' "jabaraster" 2
+  let items2 = fst itemList2
+  liftIO $ mapM_ (\l ->  print $ l) (list items2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ getUserStocksWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ (\l ->  print $ l) (list items3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
+
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do
   liftIO $ putStrLn ""

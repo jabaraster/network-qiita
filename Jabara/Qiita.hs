@@ -34,6 +34,12 @@ module Jabara.Qiita (
   , getFollowingUsersAFirstPage'
   , getFollowingUsersAFirstPage
   , getFollowingUsersAWithPage
+  , getUserStocksFirstPage'
+  , getUserStocksFirstPage
+  , getUserStocksWithPage
+  , getUserStocksAFirstPage'
+  , getUserStocksAFirstPage
+  , getUserStocksAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
   , getTagItemsWithPage
@@ -373,6 +379,51 @@ getFollowingUsersFirstPage =  (flip getFollowingUsersFirstPage') defaultPerPage
 
 getFollowingUsersWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
 getFollowingUsersWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
+
+{- -----------------------------------------------------
+ - 特定ユーザーのストックした投稿を得るための一連の関数.
+----------------------------------------------------- -}
+getUserStocksAFirstPage' :: UserName -> PerPage -> IO (ListData Item, RateLimit)
+getUserStocksAFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/stocks" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getUserStocksAFirstPage :: UserName -> IO (ListData Item, RateLimit)
+getUserStocksAFirstPage =  (flip getUserStocksAFirstPage') defaultPerPage
+
+getUserStocksAWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+getUserStocksAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getUserStocksFirstPage' :: UserName -> PerPage -> IO (ListData Item, RateLimit)
+getUserStocksFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/stocks" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getUserStocksFirstPage :: UserName -> IO (ListData Item, RateLimit)
+getUserStocksFirstPage =  (flip getUserStocksFirstPage') defaultPerPage
+
+getUserStocksWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+getUserStocksWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
