@@ -28,6 +28,12 @@ module Jabara.Qiita (
   , getFollowingTagsAFirstPage'
   , getFollowingTagsAFirstPage
   , getFollowingTagsAWithPage
+  , getFollowingUsersFirstPage'
+  , getFollowingUsersFirstPage
+  , getFollowingUsersWithPage
+  , getFollowingUsersAFirstPage'
+  , getFollowingUsersAFirstPage
+  , getFollowingUsersAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
   , getTagItemsWithPage
@@ -328,6 +334,51 @@ getFollowingTagsWithPage pagenation = do
   let tags = fromJust $ decode $ responseBody res
   let ps = parsePagenation res
   return $ (ListData { list = tags, pagenation = ps }, rateLimit)
+
+{- ---------------------------------------------------------------
+ - 特定のユーザーがフォローしているユーザーを得るための一連の関数.
+---------------------------------------------------------------- -}
+getFollowingUsersAFirstPage' :: UserName -> PerPage -> IO (ListData FollowingUser, RateLimit)
+getFollowingUsersAFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_users" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
+
+getFollowingUsersAFirstPage :: UserName -> IO (ListData FollowingUser, RateLimit)
+getFollowingUsersAFirstPage =  (flip getFollowingUsersAFirstPage') defaultPerPage
+
+getFollowingUsersAWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
+getFollowingUsersAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
+
+getFollowingUsersFirstPage' :: UserName -> PerPage -> IO (ListData FollowingUser, RateLimit)
+getFollowingUsersFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_users" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
+
+getFollowingUsersFirstPage :: UserName -> IO (ListData FollowingUser, RateLimit)
+getFollowingUsersFirstPage =  (flip getFollowingUsersFirstPage') defaultPerPage
+
+getFollowingUsersWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
+getFollowingUsersWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
 
 {- ------------------------------------------
  - 特定タグの投稿を得るための一連の関数.

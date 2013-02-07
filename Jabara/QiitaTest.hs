@@ -259,6 +259,74 @@ runGetFollowingTagsCore2 = do
   liftIO $ mapM_ (\l ->  print $ l) (list tags3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags3)
 
+runGetFollowingUsers :: IO ()
+runGetFollowingUsers = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runGetFollowingUsersCore ctx) -- 認証OK後の処理
+
+  -- 認証なし実行
+  runGetFollowingUsersCore2
+
+runGetFollowingUsersCore :: StateT QiitaContext IO ()
+runGetFollowingUsersCore = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  userList1 <- liftIO $ getFollowingUsersAFirstPage "gishi_yama"
+  let users1 = fst userList1
+  liftIO $ mapM_ (\l ->  print $ l) (list users1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation users1)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  userList2 <- liftIO $ getFollowingUsersAFirstPage' "gishi_yama" 2
+  let users2 = fst userList2
+  liftIO $ mapM_ (\l ->  print $ l) (list users2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation users2)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  userList3 <- liftIO $ getFollowingUsersAWithPage (pagenation users2 !! 0)
+  let users3 = fst userList3
+  liftIO $ mapM_ (\l ->  print $ l) (list users3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation users3)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runGetFollowingUsersCore2 :: IO ()
+runGetFollowingUsersCore2 = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  userList1 <- liftIO $ getFollowingUsersFirstPage "gishi_yama"
+  let users1 = fst userList1
+  liftIO $ mapM_ (\l ->  print $ l) (list users1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation users1)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  userList2 <- liftIO $ getFollowingUsersFirstPage' "gishi_yama" 2
+  let users2 = fst userList2
+  liftIO $ mapM_ (\l ->  print $ l) (list users2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation users2)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  userList3 <- liftIO $ getFollowingUsersWithPage (pagenation users2 !! 0)
+  let users3 = fst userList3
+  liftIO $ mapM_ (\l ->  print $ l) (list users3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation users3)
+
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do
   liftIO $ putStrLn ""
