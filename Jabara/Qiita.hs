@@ -46,6 +46,7 @@ module Jabara.Qiita (
   , postItem
   , updateItem
   , deleteItem
+  , getItem
   , stockItem
   , unstockItem
   , QiitaError(..)
@@ -63,6 +64,7 @@ module Jabara.Qiita (
   , ItemUser(..)
   , ItemTag(..)
   , Item(..)
+  , FullItem(..)
   , UserName
   , Password
   , PerPage
@@ -474,7 +476,7 @@ postItem item = do
 updateItem :: UpdateItem -> StateT QiitaContext IO (Either QiitaError Item)
 updateItem item = do
   ctx <- get
-  req <- parseUrl (itemsUrl ++ "/" ++ (update_item_uuid item) ++ (tok $ auth $ ctx))
+  req <- parseUrl (buildItemUrl' (update_item_uuid item)  ctx)
            >>= return . setRequestBodyJson' methodPut item
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
@@ -486,11 +488,26 @@ updateItem item = do
 deleteItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 deleteItem uuid = do
   ctx <- get
-  req <- parseUrl (itemsUrl ++ "/" ++ (C8.unpack uuid) ++ (tok $ auth $ ctx))
+  req <- parseUrl (buildItemUrl uuid ctx)
            >>= \r -> return $ r { method = methodDelete }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
+
+{- ------------------------------------------
+ - 特定の投稿取得
+------------------------------------------- -}
+getItem :: ItemUuid -> IO (Either RateLimit (FullItem, RateLimit))
+getItem uuid = do
+  req <- parseUrl (itemsUrl ++ "/" ++ C8.unpack uuid)
+           >>= \r -> return $ r { checkStatus = checkStatus' }
+  res <- doRequest req
+
+  let rateLimit = parseRateLimit res
+
+  case decode $ responseBody res of
+    Nothing -> return $ Left rateLimit
+    Just item -> return $ Right (item, rateLimit)
 
 {- ------------------------------------------
  - 投稿のストック
@@ -600,3 +617,9 @@ onePagenationParser = do
 
 buildStockUrl :: ItemUuid -> QiitaContext -> String
 buildStockUrl uuid ctx = itemsUrl ++ "/" ++ (C8.unpack uuid) ++ "/stock" ++ (tok $ auth $ ctx)
+
+buildItemUrl :: ItemUuid -> QiitaContext -> String
+buildItemUrl uuid ctx = itemsUrl ++ "/" ++ (C8.unpack uuid) ++ (tok $ auth $ ctx)
+
+buildItemUrl' :: String -> QiitaContext -> String
+buildItemUrl' uuid ctx = itemsUrl ++ "/" ++ uuid ++ (tok $ auth $ ctx)

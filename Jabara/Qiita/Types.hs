@@ -19,6 +19,7 @@ module Jabara.Qiita.Types (
   , ItemUser(..)
   , ItemTag(..)
   , Item(..)
+  , FullItem(..)
   , UserName
   , Password
   , PerPage
@@ -125,6 +126,11 @@ data ItemUser = ItemUser { item_user_name :: String
                          , item_user_url_name :: String
                          , item_user_profile_image_url :: String
                          } deriving (Show, Eq)
+data UserComment = UserComment { user_comment_name :: String
+                               , user_comment_url_name :: String
+                               , user_comment_profile_image_url :: String
+                               , user_comment_body :: String
+                               } deriving (Show, Eq)
 data ItemTag = ItemTag { item_tag_name :: String
                        , item_tag_url_name :: String
                        , item_tag_icon_url :: String
@@ -148,6 +154,31 @@ data Item = Item { item_id :: Integer
                  , item_tweet :: Bool
                  , item_private :: Bool
                  } deriving (Show, Eq)
+data ItemComment = ItemComment { item_comment_id :: Integer
+                               , item_comment_uuid :: String
+                               , item_comment_user :: [UserComment]
+                               } deriving (Show, Eq)
+data FullItem =  FullItem { full_item_id :: Integer
+                          , full_item_uuid :: String
+                          , full_item_user :: ItemUser
+                          , full_item_title :: String
+                          , full_item_body :: String
+                          , full_item_raw_body :: String
+                          , full_item_created_at :: String
+                          , full_item_created_at_seconds :: Integer
+                          , full_item_updated_at :: String
+                          , full_item_created_at_in_words :: String
+                          , full_item_updated_at_in_words :: String
+                          , full_item_tags :: [ItemTag]
+                          , full_item_stock_count :: Integer
+                          , full_item_stock_users :: [String]
+                          , full_item_comment_count :: Integer
+                          , full_item_url :: String
+                          , full_item_gist_url :: Maybe String
+                          , full_item_tweet :: Bool
+                          , full_item_private :: Bool
+                          , full_item_comments :: [ItemComment]
+                          } deriving (Show, Eq)
 
 {- ------------------------------------------
  - type alias.
@@ -213,9 +244,46 @@ instance FromJSON FollowingTag where
 
 instance FromJSON FollowingUser where
   parseJSON (Object v) = FollowingUser <$>
-                            v .: "name"
-                            <*> v .: "url_name"
-                            <*> v .: "profile_image_url"
+                           v .: "name"
+                           <*> v .: "url_name"
+                           <*> v .: "profile_image_url"
+  parseJSON _          = mzero
+
+instance FromJSON FullItem where
+  parseJSON (Object v) = FullItem <$>
+                               v .: "id"
+                           <*> v .: "uuid"
+                           <*> v .: "user"
+                           <*> v .: "title"
+                           <*> v .: "body"
+                           <*> v .: "raw_body"
+                           <*> v .: "created_at"
+                           <*> v .: "created_at_as_seconds"
+                           <*> v .: "updated_at"
+                           <*> v .: "created_at_in_words"
+                           <*> v .: "updated_at_in_words"
+                           <*> v .: "tags"
+                           <*> v .: "stock_count"
+                           <*> v .: "stock_users"
+                           <*> v .: "comment_count"
+                           <*> v .: "url"
+                           <*> v .: "gist_url"
+                           <*> v .: "tweet"
+                           <*> v .: "private"
+                           <*> v .: "comments"
+  parseJSON _          = mzero
+instance FromJSON ItemComment where
+  parseJSON (Object v ) =  ItemComment <$>
+                                 v .: "id"
+                             <*> v .: "uuid"
+                             <*> v .: "user"
+  parseJSON _           = mzero
+instance FromJSON UserComment where
+  parseJSON (Object v) = UserComment <$>
+                               v .: "name"
+                           <*> v .: "url_name"
+                           <*> v .: "profile_image_url"
+                           <*> v .: "body"
   parseJSON _          = mzero
 
 {- ------------------------------------------
