@@ -395,6 +395,74 @@ runGetUserStocksCore2 = do
   liftIO $ mapM_ (\l ->  print $ l) (list items3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
 
+runGetUserItems :: IO ()
+runGetUserItems = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runGetUserItemsCore ctx) -- 認証OK後の処理
+
+  -- 認証なし実行
+  runGetUserItemsCore2
+
+runGetUserItemsCore :: StateT QiitaContext IO ()
+runGetUserItemsCore = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ getUserItemsAFirstPage "FugataroO"
+  let items1 = fst itemList1
+  liftIO $ mapM_ (\l ->  print $ l) (list items1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ getUserItemsAFirstPage' "FugataroO" 2
+  let items2 = fst itemList2
+  liftIO $ mapM_ (\l ->  print $ l) (list items2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ getUserItemsAWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ (\l ->  print $ l) (list items3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runGetUserItemsCore2 :: IO ()
+runGetUserItemsCore2 = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ getUserItemsFirstPage "k-yamada@github"
+  let items1 = fst itemList1
+  liftIO $ mapM_ (\l ->  print $ l) (list items1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ getUserItemsFirstPage' "k-yamada@github" 2
+  let items2 = fst itemList2
+  liftIO $ mapM_ (\l ->  print $ l) (list items2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ getUserItemsWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ (\l ->  print $ l) (list items3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
+
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do
   liftIO $ putStrLn ""

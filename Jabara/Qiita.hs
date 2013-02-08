@@ -40,6 +40,12 @@ module Jabara.Qiita (
   , getUserStocksAFirstPage'
   , getUserStocksAFirstPage
   , getUserStocksAWithPage
+  , getUserItemsFirstPage'
+  , getUserItemsFirstPage
+  , getUserItemsWithPage
+  , getUserItemsAFirstPage'
+  , getUserItemsAFirstPage
+  , getUserItemsAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
   , getTagItemsWithPage
@@ -426,6 +432,51 @@ getUserStocksFirstPage =  (flip getUserStocksFirstPage') defaultPerPage
 
 getUserStocksWithPage :: Pagenation -> IO (ListData Item, RateLimit)
 getUserStocksWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
+
+{- -----------------------------------------
+ - 特定ユーザーの投稿を得るための一連の関数.
+----------------------------------------- -}
+getUserItemsAFirstPage' :: UserName -> PerPage -> IO (ListData Item, RateLimit)
+getUserItemsAFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/items" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getUserItemsAFirstPage :: UserName -> IO (ListData Item, RateLimit)
+getUserItemsAFirstPage =  (flip getUserItemsAFirstPage') defaultPerPage
+
+getUserItemsAWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+getUserItemsAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getUserItemsFirstPage' :: UserName -> PerPage -> IO (ListData Item, RateLimit)
+getUserItemsFirstPage' userName perPage = do
+  req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/items" ++ "?per_page=" ++ (show perPage))
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+getUserItemsFirstPage :: UserName -> IO (ListData Item, RateLimit)
+getUserItemsFirstPage =  (flip getUserItemsFirstPage') defaultPerPage
+
+getUserItemsWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+getUserItemsWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
