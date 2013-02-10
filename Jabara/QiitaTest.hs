@@ -463,6 +463,83 @@ runGetUserItemsCore2 = do
   liftIO $ mapM_ (\l ->  print $ l) (list items3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
 
+runSearchItems :: IO ()
+runSearchItems = do
+  putStrLn "Input your User Id and Enter、then password and Enter"
+  input <- getContents
+  lines <- return $ lines input
+
+  let user = C8.pack $ lines !! 0
+  let pass = C8.pack $ lines !! 1
+
+  withAuthentication user pass
+        (\err limit -> print err >> print limit) -- 認証エラー時の処理
+       (\ctx -> evalStateT runSearchItemsCore ctx) -- 認証OK後の処理
+
+  -- 認証なし実行
+  runSearchItemsCore2
+
+runSearchItemsCore :: StateT QiitaContext IO ()
+runSearchItemsCore = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 0. -----------------------------"
+  itemList0 <- liftIO $ searchStockedItemsAFirstPage "java"
+  let items0 = fst itemList0
+  liftIO $ mapM_ (\l ->  print $ l) (list items0)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items0)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ searchItemsAFirstPage "ruby emacs"
+  let items1 = fst itemList1
+  liftIO $ mapM_ (\l ->  print $ l) (list items1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ searchItemsAFirstPage' "javascript" 2
+  let items2 = fst itemList2
+  liftIO $ mapM_ (\l ->  print $ l) (list items2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ searchItemsAWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ (\l ->  print $ l) (list items3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
+  ctx2 <- get
+  liftIO $ putStrLn ("Post: " ++ (show ctx2))
+
+runSearchItemsCore2 :: IO ()
+runSearchItemsCore2 = do
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 1. -----------------------------"
+  itemList1 <- liftIO $ searchItemsFirstPage "haskell"
+  let items1 = fst itemList1
+  liftIO $ mapM_ (\l ->  print $ l) (list items1)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 2. -----------------------------"
+  itemList2 <- liftIO $ searchItemsFirstPage' "ruby" 2
+  let items2 = fst itemList2
+  liftIO $ mapM_ (\l ->  print $ l) (list items2)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
+
+  liftIO $ putStrLn ""
+  liftIO $ putStrLn "- 3. -----------------------------"
+  itemList3 <- liftIO $ searchItemsWithPage (pagenation items2 !! 0)
+  let items3 = fst itemList3
+  liftIO $ mapM_ (\l ->  print $ l) (list items3)
+  liftIO $ mapM_ (\l ->  print $ l) (pagenation items3)
+
 runGetTagItems :: StateT QiitaContext IO ()
 runGetTagItems = do
   liftIO $ putStrLn ""

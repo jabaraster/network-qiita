@@ -46,6 +46,13 @@ module Jabara.Qiita (
   , getUserItemsAFirstPage'
   , getUserItemsAFirstPage
   , getUserItemsAWithPage
+  , searchItemsFirstPage'
+  , searchItemsFirstPage
+  , searchStockedItemsAFirstPage
+  , searchItemsWithPage
+  , searchItemsAFirstPage'
+  , searchItemsAFirstPage
+  , searchItemsAWithPage
   , getTagItemsFirstPage'
   , getTagItemsFirstPage
   , getTagItemsWithPage
@@ -75,6 +82,7 @@ module Jabara.Qiita (
   , Password
   , PerPage
   , ItemUuid
+  , Q
   , itemToUpdateItem
 -- for test
 --  , setRequestBodyJson
@@ -119,6 +127,7 @@ usersUrl = endpoint ++ "/users"
 tagsUrl = endpoint ++ "/tags"
 itemsUrl = endpoint ++ "/items"
 stocksUrl = endpoint ++ "/stocks"
+searchUrl = endpoint ++ "/search"
 
 {- ------------------------------------------
  - public functions.
@@ -477,6 +486,83 @@ getUserItemsFirstPage =  (flip getUserItemsFirstPage') defaultPerPage
 
 getUserItemsWithPage :: Pagenation -> IO (ListData Item, RateLimit)
 getUserItemsWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let users = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = users, pagenation = ps }, rateLimit)
+
+{- -----------------------------------------
+ - 検索結果を得るための一連の関数.
+----------------------------------------- -}
+searchItemsAFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
+searchItemsAFirstPage' q perPage = do
+  Prelude.putStrLn $ show q
+  req <- parseUrl searchUrl
+--           >>= return . urlEncodedBody [("q", q), ("stocked", stocked)]
+           >>= return . urlEncodedBody [("q", q)]
+           >>= \request -> return (request { checkStatus = checkStatus' })
+  -- 通信実行
+  res <- withManager $ \manager -> httpLbs req manager
+--  res <- doRequest req
+  Prelude.putStrLn $ show $ responseBody res
+  -- レスポンスの処理
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+searchItemsAFirstPage :: Q -> IO (ListData Item, RateLimit)
+searchItemsAFirstPage =  (flip searchItemsAFirstPage') defaultPerPage
+
+searchStockedItemsAFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
+searchStockedItemsAFirstPage' q perPage = do
+  Prelude.putStrLn $ show q
+  req <- parseUrl searchUrl
+--           >>= return . urlEncodedBody [("q", q), ("stocked", stocked)]
+           >>= return . urlEncodedBody [("q", q), ("stocked", "True")]
+           >>= \request -> return (request { checkStatus = checkStatus' })
+  -- 通信実行
+  res <- withManager $ \manager -> httpLbs req manager
+--  res <- doRequest req
+  Prelude.putStrLn $ show $ responseBody res
+  -- レスポンスの処理
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+searchStockedItemsAFirstPage :: Q -> IO (ListData Item, RateLimit)
+searchStockedItemsAFirstPage =  (flip searchStockedItemsAFirstPage') defaultPerPage
+
+searchItemsAWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+searchItemsAWithPage pagenation = do
+  req <- parseUrl $ C8.unpack $ pageUrl pagenation
+  res <- doRequest req
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+searchItemsFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
+searchItemsFirstPage' q perPage = do
+  req <- parseUrl searchUrl
+--           >>= return . urlEncodedBody [("q", q), ("stocked", stocked)]
+           >>= return . urlEncodedBody [("q", q)]
+  -- 通信実行
+  res <- withManager $ \manager -> httpLbs req manager
+  -- レスポンスの処理
+  let rateLimit = parseRateLimit res
+  let items = fromJust $ decode $ responseBody res
+  let ps = parsePagenation res
+  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+
+searchItemsFirstPage :: Q -> IO (ListData Item, RateLimit)
+searchItemsFirstPage =  (flip searchItemsFirstPage') defaultPerPage
+
+searchItemsWithPage :: Pagenation -> IO (ListData Item, RateLimit)
+searchItemsWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
