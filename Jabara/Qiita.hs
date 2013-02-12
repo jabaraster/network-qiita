@@ -48,6 +48,7 @@ module Jabara.Qiita (
   , getUserItemsAWithPage
   , searchItemsFirstPage'
   , searchItemsFirstPage
+  , searchStockedItemsAFirstPage'
   , searchStockedItemsAFirstPage
   , searchItemsWithPage
   , searchItemsAFirstPage'
@@ -109,6 +110,7 @@ import GHC.Exception (throw)
 import Network.HTTP.Conduit
 import Network.HTTP.Types
 import Network.HTTP.Types.Header
+import Network.URI
 
 import qualified Text.Parsec as P
 import Text.Parsec.String
@@ -188,6 +190,7 @@ getLoginUserInformation = do
   req <- parseUrl (userUrl ++ (tok $ auth $ ctx))
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res } -- StateTに新しいQiitaContextを格納する
+  liftIO $ Prelude.putStrLn $ show $ responseBody res
   return $ fromJust $ decode $ responseBody res
 
 {- ------------------------------------------
@@ -498,15 +501,8 @@ getUserItemsWithPage pagenation = do
 ----------------------------------------- -}
 searchItemsAFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
 searchItemsAFirstPage' q perPage = do
-  Prelude.putStrLn $ show q
-  req <- parseUrl searchUrl
---           >>= return . urlEncodedBody [("q", q), ("stocked", stocked)]
-           >>= return . urlEncodedBody [("q", q)]
-           >>= \request -> return (request { checkStatus = checkStatus' })
-  -- 通信実行
-  res <- withManager $ \manager -> httpLbs req manager
---  res <- doRequest req
-  Prelude.putStrLn $ show $ responseBody res
+  req <- parseUrl (searchUrl ++ "?q=" ++ (show q) ++ "&per_page=" ++ (show perPage))
+  res <- doRequest req
   -- レスポンスの処理
   let rateLimit = parseRateLimit res
   let items = fromJust $ decode $ responseBody res
@@ -516,24 +512,18 @@ searchItemsAFirstPage' q perPage = do
 searchItemsAFirstPage :: Q -> IO (ListData Item, RateLimit)
 searchItemsAFirstPage =  (flip searchItemsAFirstPage') defaultPerPage
 
-searchStockedItemsAFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
+searchStockedItemsAFirstPage' :: Q -> PerPage -> StateT QiitaContext IO (ListData Item)
 searchStockedItemsAFirstPage' q perPage = do
-  Prelude.putStrLn $ show q
-  req <- parseUrl searchUrl
---           >>= return . urlEncodedBody [("q", q), ("stocked", stocked)]
-           >>= return . urlEncodedBody [("q", q), ("stocked", "True")]
-           >>= \request -> return (request { checkStatus = checkStatus' })
-  -- 通信実行
-  res <- withManager $ \manager -> httpLbs req manager
---  res <- doRequest req
-  Prelude.putStrLn $ show $ responseBody res
+  ctx <- get
+  req <- parseUrl (searchUrl ++ (tok $ auth $ ctx) ++ "&q=" ++ (escapeURIString isAllowedInURI $ show q) ++ "&stocked=True&per_page=" ++ (show perPage))
+  res <- doRequest req
+  put $ ctx { rateLimit = parseRateLimit res }
   -- レスポンスの処理
-  let rateLimit = parseRateLimit res
   let items = fromJust $ decode $ responseBody res
   let ps = parsePagenation res
-  return $ (ListData { list = items, pagenation = ps }, rateLimit)
+  return $ (ListData { list = items, pagenation = ps })
 
-searchStockedItemsAFirstPage :: Q -> IO (ListData Item, RateLimit)
+searchStockedItemsAFirstPage :: Q -> StateT QiitaContext IO (ListData Item)
 searchStockedItemsAFirstPage =  (flip searchStockedItemsAFirstPage') defaultPerPage
 
 searchItemsAWithPage :: Pagenation -> IO (ListData Item, RateLimit)
@@ -547,11 +537,8 @@ searchItemsAWithPage pagenation = do
 
 searchItemsFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
 searchItemsFirstPage' q perPage = do
-  req <- parseUrl searchUrl
---           >>= return . urlEncodedBody [("q", q), ("stocked", stocked)]
-           >>= return . urlEncodedBody [("q", q)]
-  -- 通信実行
-  res <- withManager $ \manager -> httpLbs req manager
+  req <- parseUrl (searchUrl ++ "?q=" ++ (show q) ++ "&per_page=" ++ (show perPage))
+  res <- doRequest req
   -- レスポンスの処理
   let rateLimit = parseRateLimit res
   let items = fromJust $ decode $ responseBody res

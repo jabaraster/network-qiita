@@ -483,8 +483,8 @@ runSearchItemsCore :: StateT QiitaContext IO ()
 runSearchItemsCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 0. -----------------------------"
-  itemList0 <- liftIO $ searchStockedItemsAFirstPage "java"
-  let items0 = fst itemList0
+  items0 <- searchStockedItemsAFirstPage "java"
+--  let items0 = fst itemList0
   liftIO $ mapM_ (\l ->  print $ l) (list items0)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items0)
   ctx2 <- get
