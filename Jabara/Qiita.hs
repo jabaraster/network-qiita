@@ -501,7 +501,7 @@ getUserItemsWithPage pagenation = do
 ----------------------------------------- -}
 searchItemsAFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
 searchItemsAFirstPage' q perPage = do
-  req <- parseUrl (searchUrl ++ "?q=" ++ (show q) ++ "&per_page=" ++ (show perPage))
+  req <- parseUrl (searchUrl ++ "?q=" ++ (escapeURIString isAllowedInURI $ C8.unpack q) ++ "&per_page=" ++ (show perPage))
   res <- doRequest req
   -- レスポンスの処理
   let rateLimit = parseRateLimit res
@@ -515,7 +515,7 @@ searchItemsAFirstPage =  (flip searchItemsAFirstPage') defaultPerPage
 searchStockedItemsAFirstPage' :: Q -> PerPage -> StateT QiitaContext IO (ListData Item)
 searchStockedItemsAFirstPage' q perPage = do
   ctx <- get
-  req <- parseUrl (searchUrl ++ (tok $ auth $ ctx) ++ "&q=" ++ (escapeURIString isAllowedInURI $ show q) ++ "&stocked=True&per_page=" ++ (show perPage))
+  req <- parseUrl (searchUrl ++ (tok $ auth $ ctx) ++ "&q=" ++ (escapeURIString isAllowedInURI $ C8.unpack q) ++ "&stocked=True&per_page=" ++ (show perPage))
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   -- レスポンスの処理
@@ -537,7 +537,7 @@ searchItemsAWithPage pagenation = do
 
 searchItemsFirstPage' :: Q -> PerPage -> IO (ListData Item, RateLimit)
 searchItemsFirstPage' q perPage = do
-  req <- parseUrl (searchUrl ++ "?q=" ++ (show q) ++ "&per_page=" ++ (show perPage))
+  req <- parseUrl (searchUrl ++ "?q=" ++ (escapeURIString isAllowedInURI $ C8.unpack q) ++ "&per_page=" ++ (show perPage))
   res <- doRequest req
   -- レスポンスの処理
   let rateLimit = parseRateLimit res

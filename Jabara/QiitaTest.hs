@@ -484,7 +484,6 @@ runSearchItemsCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 0. -----------------------------"
   items0 <- searchStockedItemsAFirstPage "java"
---  let items0 = fst itemList0
   liftIO $ mapM_ (\l ->  print $ l) (list items0)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items0)
   ctx2 <- get
@@ -501,7 +500,7 @@ runSearchItemsCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  itemList2 <- liftIO $ searchItemsAFirstPage' "javascript" 2
+  itemList2 <- liftIO $ searchItemsAFirstPage' "ruby emacs" 2
   let items2 = fst itemList2
   liftIO $ mapM_ (\l ->  print $ l) (list items2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
@@ -528,7 +527,7 @@ runSearchItemsCore2 = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  itemList2 <- liftIO $ searchItemsFirstPage' "ruby" 2
+  itemList2 <- liftIO $ searchItemsFirstPage' "haskell" 2
   let items2 = fst itemList2
   liftIO $ mapM_ (\l ->  print $ l) (list items2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
