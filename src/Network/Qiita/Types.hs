@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Jabara.Qiita.Types (
+module Network.Qiita.Types (
   QiitaError(..)
   , Auth(..)
   , RateLimit(..)
@@ -62,6 +62,7 @@ data User = User { user_name :: String
                  , user_following_users :: Int
                  , user_items :: Int
                  } deriving (Show, Eq, Generic)
+
 data QiitaContext = QiitaContext { auth :: Auth, rateLimit :: RateLimit }
                     deriving (Show, Eq, Generic)
 data Pagenation = Pagenation { pageRel :: BS.ByteString, pageUrl :: BS.ByteString }
@@ -198,7 +199,25 @@ type Q = BS.ByteString
 instance FromJSON QiitaError
 instance FromJSON Auth
 instance FromJSON RateLimit
-instance FromJSON User
+
+instance FromJSON User where
+  parseJSON (Object v) = User <$>
+                           v .: "name"
+                           <*> v .: "url_name"
+                           <*> v .: "profile_image_url"
+                           <*> v .: "url"
+                           <*> v .: "description"
+                           <*> v .: "website_url"
+                           <*> v .: "organization"
+                           <*> v .: "location"
+                           <*> v .: "facebook"
+                           <*> v .: "linkedin"
+                           <*> v .: "twitter"
+                           <*> v .: "github"
+                           <*> v .: "followers"
+                           <*> v .: "following_users"
+                           <*> v .: "items"
+  parseJSON _          = mzero
 
 -- 自動パースにたよるとセレクタ(＝プロパティ)の名前がかぶってしまう.
 -- Haskellでこれは許されないので、手動でパースを書かざるを得ない.

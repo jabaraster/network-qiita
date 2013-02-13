@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Jabara.QiitaTest where
+module Network.QiitaTest where
 
-import Jabara.Qiita
+import Network.Qiita
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad.State
@@ -59,7 +59,7 @@ runCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 3. -----------------------------"
-  user' <- liftIO $ getUserInformation "gishi_yama"
+  user' <- liftIO $ getUserInformation "jabaraster"
   liftIO $ print user'
   ctx3 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx3))
@@ -191,8 +191,8 @@ runGetStocksCore = do
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-runGetFollowingTags :: IO ()
-runGetFollowingTags = do
+runGetUserFollowingTags :: IO ()
+runGetUserFollowingTags = do
   putStrLn "Input your User Id and Enter、then password and Enter"
   input <- getContents
   lines <- return $ lines input
@@ -202,16 +202,16 @@ runGetFollowingTags = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-       (\ctx -> evalStateT runGetFollowingTagsCore ctx) -- 認証OK後の処理
+       (\ctx -> evalStateT runGetUserFollowingTagsCore ctx) -- 認証OK後の処理
 
   -- 認証なし実行
-  runGetFollowingTagsCore2
+  runGetUserFollowingTagsCore2
 
-runGetFollowingTagsCore :: StateT QiitaContext IO ()
-runGetFollowingTagsCore = do
+runGetUserFollowingTagsCore :: StateT QiitaContext IO ()
+runGetUserFollowingTagsCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
-  tagList1 <- liftIO $ getFollowingTagsAFirstPage "gishi_yama"
+  tagList1 <- liftIO $ getUserFollowingTagsAFirstPage "jabaraster"
   let tags1 = fst tagList1
   liftIO $ mapM_ (\l ->  print $ l) (list tags1)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags1)
@@ -220,7 +220,7 @@ runGetFollowingTagsCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  tagList2 <- liftIO $ getFollowingTagsAFirstPage' "gishi_yama" 2
+  tagList2 <- liftIO $ getUserFollowingTagsAFirstPage' "jabaraster" 2
   let tags2 = fst tagList2
   liftIO $ mapM_ (\l ->  print $ l) (list tags2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags2)
@@ -229,38 +229,38 @@ runGetFollowingTagsCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 3. -----------------------------"
-  tagList3 <- liftIO $ getFollowingTagsAWithPage (pagenation tags2 !! 0)
+  tagList3 <- liftIO $ getUserFollowingTagsAWithPage (pagenation tags2 !! 0)
   let tags3 = fst tagList3
   liftIO $ mapM_ (\l ->  print $ l) (list tags3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags3)
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-runGetFollowingTagsCore2 :: IO ()
-runGetFollowingTagsCore2 = do
+runGetUserFollowingTagsCore2 :: IO ()
+runGetUserFollowingTagsCore2 = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
-  tagList1 <- liftIO $ getFollowingTagsFirstPage "gishi_yama"
+  tagList1 <- liftIO $ getUserFollowingTagsFirstPage "jabaraster"
   let tags1 = fst tagList1
   liftIO $ mapM_ (\l ->  print $ l) (list tags1)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags1)
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  tagList2 <- liftIO $ getFollowingTagsFirstPage' "gishi_yama" 2
+  tagList2 <- liftIO $ getUserFollowingTagsFirstPage' "jabaraster" 2
   let tags2 = fst tagList2
   liftIO $ mapM_ (\l ->  print $ l) (list tags2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags2)
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 3. -----------------------------"
-  tagList3 <- liftIO $ getFollowingTagsWithPage (pagenation tags2 !! 0)
+  tagList3 <- liftIO $ getUserFollowingTagsWithPage (pagenation tags2 !! 0)
   let tags3 = fst tagList3
   liftIO $ mapM_ (\l ->  print $ l) (list tags3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation tags3)
 
-runGetFollowingUsers :: IO ()
-runGetFollowingUsers = do
+runGetUserFollowingUsers :: IO ()
+runGetUserFollowingUsers = do
   putStrLn "Input your User Id and Enter、then password and Enter"
   input <- getContents
   lines <- return $ lines input
@@ -270,16 +270,16 @@ runGetFollowingUsers = do
 
   withAuthentication user pass
         (\err limit -> print err >> print limit) -- 認証エラー時の処理
-       (\ctx -> evalStateT runGetFollowingUsersCore ctx) -- 認証OK後の処理
+       (\ctx -> evalStateT runGetUserFollowingUsersCore ctx) -- 認証OK後の処理
 
   -- 認証なし実行
-  runGetFollowingUsersCore2
+  runGetUserFollowingUsersCore2
 
-runGetFollowingUsersCore :: StateT QiitaContext IO ()
-runGetFollowingUsersCore = do
+runGetUserFollowingUsersCore :: StateT QiitaContext IO ()
+runGetUserFollowingUsersCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
-  userList1 <- liftIO $ getFollowingUsersAFirstPage "gishi_yama"
+  userList1 <- liftIO $ getUserFollowingUsersAFirstPage "jabaraster"
   let users1 = fst userList1
   liftIO $ mapM_ (\l ->  print $ l) (list users1)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users1)
@@ -288,7 +288,7 @@ runGetFollowingUsersCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  userList2 <- liftIO $ getFollowingUsersAFirstPage' "gishi_yama" 2
+  userList2 <- liftIO $ getUserFollowingUsersAFirstPage' "jabaraster" 2
   let users2 = fst userList2
   liftIO $ mapM_ (\l ->  print $ l) (list users2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users2)
@@ -297,32 +297,32 @@ runGetFollowingUsersCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 3. -----------------------------"
-  userList3 <- liftIO $ getFollowingUsersAWithPage (pagenation users2 !! 0)
+  userList3 <- liftIO $ getUserFollowingUsersAWithPage (pagenation users2 !! 0)
   let users3 = fst userList3
   liftIO $ mapM_ (\l ->  print $ l) (list users3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users3)
   ctx2 <- get
   liftIO $ putStrLn ("Post: " ++ (show ctx2))
 
-runGetFollowingUsersCore2 :: IO ()
-runGetFollowingUsersCore2 = do
+runGetUserFollowingUsersCore2 :: IO ()
+runGetUserFollowingUsersCore2 = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
-  userList1 <- liftIO $ getFollowingUsersFirstPage "gishi_yama"
+  userList1 <- liftIO $ getUserFollowingUsersFirstPage "jabaraster"
   let users1 = fst userList1
   liftIO $ mapM_ (\l ->  print $ l) (list users1)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users1)
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  userList2 <- liftIO $ getFollowingUsersFirstPage' "gishi_yama" 2
+  userList2 <- liftIO $ getUserFollowingUsersFirstPage' "jabaraster" 2
   let users2 = fst userList2
   liftIO $ mapM_ (\l ->  print $ l) (list users2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users2)
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 3. -----------------------------"
-  userList3 <- liftIO $ getFollowingUsersWithPage (pagenation users2 !! 0)
+  userList3 <- liftIO $ getUserFollowingUsersWithPage (pagenation users2 !! 0)
   let users3 = fst userList3
   liftIO $ mapM_ (\l ->  print $ l) (list users3)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation users3)

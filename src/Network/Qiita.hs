@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Jabara.Qiita (
+module Network.Qiita (
   withAuthentication
   , getAnonymousRateLimit
   , getRateLimit
@@ -22,18 +22,18 @@ module Jabara.Qiita (
   , getStocksAFirstPage'
   , getStocksAFirstPage
   , getStocksAWithPage
-  , getFollowingTagsFirstPage'
-  , getFollowingTagsFirstPage
-  , getFollowingTagsWithPage
-  , getFollowingTagsAFirstPage'
-  , getFollowingTagsAFirstPage
-  , getFollowingTagsAWithPage
-  , getFollowingUsersFirstPage'
-  , getFollowingUsersFirstPage
-  , getFollowingUsersWithPage
-  , getFollowingUsersAFirstPage'
-  , getFollowingUsersAFirstPage
-  , getFollowingUsersAWithPage
+  , getUserFollowingTagsFirstPage'
+  , getUserFollowingTagsFirstPage
+  , getUserFollowingTagsWithPage
+  , getUserFollowingTagsAFirstPage'
+  , getUserFollowingTagsAFirstPage
+  , getUserFollowingTagsAWithPage
+  , getUserFollowingUsersFirstPage'
+  , getUserFollowingUsersFirstPage
+  , getUserFollowingUsersWithPage
+  , getUserFollowingUsersAFirstPage'
+  , getUserFollowingUsersAFirstPage
+  , getUserFollowingUsersAWithPage
   , getUserStocksFirstPage'
   , getUserStocksFirstPage
   , getUserStocksWithPage
@@ -85,16 +85,9 @@ module Jabara.Qiita (
   , ItemUuid
   , Q
   , itemToUpdateItem
--- for test
---  , setRequestBodyJson
---  , doRequest
---  , parseRateLimit
---  , parsePagenation
---  , parsePagenationCore
---  , onePagenationParser
   ) where
 
-import Jabara.Qiita.Types
+import Network.Qiita.Types
 
 import Control.Monad.State
 import Data.Aeson
@@ -108,7 +101,7 @@ import Data.Maybe
 import GHC.Exception (throw)
 
 import Network.HTTP.Conduit
-import Network.HTTP.Types
+import qualified Network.HTTP.Types as HT
 import Network.HTTP.Types.Header
 import Network.URI
 
@@ -319,8 +312,8 @@ getStocksAWithPage pagenation = do
 {- -----------------------------------------------------------
  - 特定のユーザーがフォローしているタグを得るための一連の関数.
 ------------------------------------------------------------ -}
-getFollowingTagsAFirstPage' :: UserName -> PerPage -> IO (ListData FollowingTag, RateLimit)
-getFollowingTagsAFirstPage' userName perPage = do
+getUserFollowingTagsAFirstPage' :: UserName -> PerPage -> IO (ListData FollowingTag, RateLimit)
+getUserFollowingTagsAFirstPage' userName perPage = do
   req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_tags" ++ "?per_page=" ++ (show perPage))
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -328,11 +321,11 @@ getFollowingTagsAFirstPage' userName perPage = do
   let ps = parsePagenation res
   return $ (ListData { list = tags, pagenation = ps }, rateLimit)
 
-getFollowingTagsAFirstPage :: UserName -> IO (ListData FollowingTag, RateLimit)
-getFollowingTagsAFirstPage =  (flip getFollowingTagsAFirstPage') defaultPerPage
+getUserFollowingTagsAFirstPage :: UserName -> IO (ListData FollowingTag, RateLimit)
+getUserFollowingTagsAFirstPage =  (flip getUserFollowingTagsAFirstPage') defaultPerPage
 
-getFollowingTagsAWithPage :: Pagenation -> IO (ListData FollowingTag, RateLimit)
-getFollowingTagsAWithPage pagenation = do
+getUserFollowingTagsAWithPage :: Pagenation -> IO (ListData FollowingTag, RateLimit)
+getUserFollowingTagsAWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -340,8 +333,8 @@ getFollowingTagsAWithPage pagenation = do
   let ps = parsePagenation res
   return $ (ListData { list = tags, pagenation = ps }, rateLimit)
 
-getFollowingTagsFirstPage' :: UserName -> PerPage -> IO (ListData FollowingTag, RateLimit)
-getFollowingTagsFirstPage' userName perPage = do
+getUserFollowingTagsFirstPage' :: UserName -> PerPage -> IO (ListData FollowingTag, RateLimit)
+getUserFollowingTagsFirstPage' userName perPage = do
   req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_tags" ++ "?per_page=" ++ (show perPage))
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -349,11 +342,11 @@ getFollowingTagsFirstPage' userName perPage = do
   let ps = parsePagenation res
   return $ (ListData { list = tags, pagenation = ps }, rateLimit)
 
-getFollowingTagsFirstPage :: UserName -> IO (ListData FollowingTag, RateLimit)
-getFollowingTagsFirstPage =  (flip getFollowingTagsFirstPage') defaultPerPage
+getUserFollowingTagsFirstPage :: UserName -> IO (ListData FollowingTag, RateLimit)
+getUserFollowingTagsFirstPage =  (flip getUserFollowingTagsFirstPage') defaultPerPage
 
-getFollowingTagsWithPage :: Pagenation -> IO (ListData FollowingTag, RateLimit)
-getFollowingTagsWithPage pagenation = do
+getUserFollowingTagsWithPage :: Pagenation -> IO (ListData FollowingTag, RateLimit)
+getUserFollowingTagsWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -364,8 +357,8 @@ getFollowingTagsWithPage pagenation = do
 {- ---------------------------------------------------------------
  - 特定のユーザーがフォローしているユーザーを得るための一連の関数.
 ---------------------------------------------------------------- -}
-getFollowingUsersAFirstPage' :: UserName -> PerPage -> IO (ListData FollowingUser, RateLimit)
-getFollowingUsersAFirstPage' userName perPage = do
+getUserFollowingUsersAFirstPage' :: UserName -> PerPage -> IO (ListData FollowingUser, RateLimit)
+getUserFollowingUsersAFirstPage' userName perPage = do
   req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_users" ++ "?per_page=" ++ (show perPage))
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -373,11 +366,11 @@ getFollowingUsersAFirstPage' userName perPage = do
   let ps = parsePagenation res
   return $ (ListData { list = users, pagenation = ps }, rateLimit)
 
-getFollowingUsersAFirstPage :: UserName -> IO (ListData FollowingUser, RateLimit)
-getFollowingUsersAFirstPage =  (flip getFollowingUsersAFirstPage') defaultPerPage
+getUserFollowingUsersAFirstPage :: UserName -> IO (ListData FollowingUser, RateLimit)
+getUserFollowingUsersAFirstPage =  (flip getUserFollowingUsersAFirstPage') defaultPerPage
 
-getFollowingUsersAWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
-getFollowingUsersAWithPage pagenation = do
+getUserFollowingUsersAWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
+getUserFollowingUsersAWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -385,8 +378,8 @@ getFollowingUsersAWithPage pagenation = do
   let ps = parsePagenation res
   return $ (ListData { list = users, pagenation = ps }, rateLimit)
 
-getFollowingUsersFirstPage' :: UserName -> PerPage -> IO (ListData FollowingUser, RateLimit)
-getFollowingUsersFirstPage' userName perPage = do
+getUserFollowingUsersFirstPage' :: UserName -> PerPage -> IO (ListData FollowingUser, RateLimit)
+getUserFollowingUsersFirstPage' userName perPage = do
   req <- parseUrl (usersUrl ++ "/" ++ C8.unpack userName ++ "/following_users" ++ "?per_page=" ++ (show perPage))
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -394,11 +387,11 @@ getFollowingUsersFirstPage' userName perPage = do
   let ps = parsePagenation res
   return $ (ListData { list = users, pagenation = ps }, rateLimit)
 
-getFollowingUsersFirstPage :: UserName -> IO (ListData FollowingUser, RateLimit)
-getFollowingUsersFirstPage =  (flip getFollowingUsersFirstPage') defaultPerPage
+getUserFollowingUsersFirstPage :: UserName -> IO (ListData FollowingUser, RateLimit)
+getUserFollowingUsersFirstPage =  (flip getUserFollowingUsersFirstPage') defaultPerPage
 
-getFollowingUsersWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
-getFollowingUsersWithPage pagenation = do
+getUserFollowingUsersWithPage :: Pagenation -> IO (ListData FollowingUser, RateLimit)
+getUserFollowingUsersWithPage pagenation = do
   req <- parseUrl $ C8.unpack $ pageUrl pagenation
   res <- doRequest req
   let rateLimit = parseRateLimit res
@@ -601,7 +594,7 @@ updateItem :: UpdateItem -> StateT QiitaContext IO (Either QiitaError Item)
 updateItem item = do
   ctx <- get
   req <- parseUrl (buildItemUrl' (update_item_uuid item)  ctx)
-           >>= return . setRequestBodyJson' methodPut item
+           >>= return . setRequestBodyJson' HT.methodPut item
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ decodeJsonBody $ responseBody res
@@ -613,7 +606,7 @@ deleteItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 deleteItem uuid = do
   ctx <- get
   req <- parseUrl (buildItemUrl uuid ctx)
-           >>= \r -> return $ r { method = methodDelete }
+           >>= \r -> return $ r { method = HT.methodDelete }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -640,7 +633,7 @@ stockItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 stockItem uuid = do
   ctx <- get
   req <- parseUrl (buildStockUrl uuid ctx)
-           >>= \r -> return $ r { method = methodPut }
+           >>= \r -> return $ r { method = HT.methodPut }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -652,7 +645,7 @@ unstockItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 unstockItem uuid = do
   ctx <- get
   req <- parseUrl (buildStockUrl uuid ctx)
-           >>= \r -> return $ r { method = methodDelete }
+           >>= \r -> return $ r { method = HT.methodDelete }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -664,8 +657,8 @@ unstockItem uuid = do
 tok auth = "?token=" ++ (token auth)
 
 checkStatus' status headers
-  | statusCode status < 500 = Nothing
-  | otherwise               = throw $ StatusCodeException status headers
+  | HT.statusCode status < 500 = Nothing
+  | otherwise                  = throw $ StatusCodeException status headers
 
 decodeJsonBody :: (FromJSON a) => LBS.ByteString -> Either QiitaError a
 decodeJsonBody body = case decode body of
@@ -697,13 +690,13 @@ lookupIntValue headerName headers = case lookup headerName headers of
 setRequestBodyJson :: (ToJSON j) => j -> Request m -> Request m
 setRequestBodyJson entity req = req {
                                   requestBody = RequestBodyLBS $ encode entity
-                                  , method = methodPost
+                                  , method = HT.methodPost
                                   , requestHeaders = [ ("content-type","application/json")
                                                      , ("user-agent","Jabara.Qiita/1.0")
                                                      ]
                                 }
 
-setRequestBodyJson' :: (ToJSON j) => Method -> j -> Request m -> Request m
+setRequestBodyJson' :: (ToJSON j) => HT.Method -> j -> Request m -> Request m
 setRequestBodyJson' method entity req = req {
                                           requestBody = RequestBodyLBS $ encode entity
                                           , method = method
