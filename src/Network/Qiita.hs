@@ -91,7 +91,6 @@ import Network.Qiita.Types
 
 import Control.Monad.State
 import Data.Aeson
-import Data.Attoparsec.Char8 (char)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -101,7 +100,7 @@ import Data.Maybe
 import GHC.Exception (throw)
 
 import Network.HTTP.Conduit
-import qualified Network.HTTP.Types as HT
+import Network.HTTP.Types
 import Network.HTTP.Types.Header
 import Network.URI
 
@@ -183,7 +182,6 @@ getLoginUserInformation = do
   req <- parseUrl (userUrl ++ (tok $ auth $ ctx))
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res } -- StateTに新しいQiitaContextを格納する
-  liftIO $ Prelude.putStrLn $ show $ responseBody res
   return $ fromJust $ decode $ responseBody res
 
 {- ------------------------------------------
@@ -594,7 +592,7 @@ updateItem :: UpdateItem -> StateT QiitaContext IO (Either QiitaError Item)
 updateItem item = do
   ctx <- get
   req <- parseUrl (buildItemUrl' (update_item_uuid item)  ctx)
-           >>= return . setRequestBodyJson' HT.methodPut item
+           >>= return . setRequestBodyJson' methodPut item
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ decodeJsonBody $ responseBody res
@@ -606,7 +604,7 @@ deleteItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 deleteItem uuid = do
   ctx <- get
   req <- parseUrl (buildItemUrl uuid ctx)
-           >>= \r -> return $ r { method = HT.methodDelete }
+           >>= \r -> return $ r { method = methodDelete }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -633,7 +631,7 @@ stockItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 stockItem uuid = do
   ctx <- get
   req <- parseUrl (buildStockUrl uuid ctx)
-           >>= \r -> return $ r { method = HT.methodPut }
+           >>= \r -> return $ r { method = methodPut }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -645,7 +643,7 @@ unstockItem :: ItemUuid -> StateT QiitaContext IO (Either QiitaError ())
 unstockItem uuid = do
   ctx <- get
   req <- parseUrl (buildStockUrl uuid ctx)
-           >>= \r -> return $ r { method = HT.methodDelete }
+           >>= \r -> return $ r { method = methodDelete }
   res <- doRequest req
   put $ ctx { rateLimit = parseRateLimit res }
   return $ Right ()
@@ -657,7 +655,7 @@ unstockItem uuid = do
 tok auth = "?token=" ++ (token auth)
 
 checkStatus' status headers
-  | HT.statusCode status < 500 = Nothing
+  | statusCode status < 500 = Nothing
   | otherwise                  = throw $ StatusCodeException status headers
 
 decodeJsonBody :: (FromJSON a) => LBS.ByteString -> Either QiitaError a
@@ -690,13 +688,13 @@ lookupIntValue headerName headers = case lookup headerName headers of
 setRequestBodyJson :: (ToJSON j) => j -> Request m -> Request m
 setRequestBodyJson entity req = req {
                                   requestBody = RequestBodyLBS $ encode entity
-                                  , method = HT.methodPost
+                                  , method = methodPost
                                   , requestHeaders = [ ("content-type","application/json")
                                                      , ("user-agent","Jabara.Qiita/1.0")
                                                      ]
                                 }
 
-setRequestBodyJson' :: (ToJSON j) => HT.Method -> j -> Request m -> Request m
+setRequestBodyJson' :: (ToJSON j) => Method -> j -> Request m -> Request m
 setRequestBodyJson' method entity req = req {
                                           requestBody = RequestBodyLBS $ encode entity
                                           , method = method

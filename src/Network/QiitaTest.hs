@@ -5,16 +5,11 @@ module Network.QiitaTest where
 
 import Network.Qiita
 
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad.State
-import Data.Aeson
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy.Char8 as LC
-import Data.Maybe
-import GHC.Generics (Generic)
-import Network.HTTP.Conduit
 
 
 {- ------------------------------------------
@@ -415,7 +410,7 @@ runGetUserItemsCore :: StateT QiitaContext IO ()
 runGetUserItemsCore = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
-  itemList1 <- liftIO $ getUserItemsAFirstPage "FugataroO"
+  itemList1 <- liftIO $ getUserItemsAFirstPage "jabaraster"
   let items1 = fst itemList1
   liftIO $ mapM_ (\l ->  print $ l) (list items1)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
@@ -424,7 +419,7 @@ runGetUserItemsCore = do
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  itemList2 <- liftIO $ getUserItemsAFirstPage' "FugataroO" 2
+  itemList2 <- liftIO $ getUserItemsAFirstPage' "jabaraster" 2
   let items2 = fst itemList2
   liftIO $ mapM_ (\l ->  print $ l) (list items2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
