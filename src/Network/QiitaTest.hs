@@ -439,14 +439,14 @@ runGetUserItemsCore2 :: IO ()
 runGetUserItemsCore2 = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 1. -----------------------------"
-  itemList1 <- liftIO $ getUserItemsFirstPage "k-yamada@github"
+  itemList1 <- liftIO $ getUserItemsFirstPage "jabaraster"
   let items1 = fst itemList1
   liftIO $ mapM_ (\l ->  print $ l) (list items1)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items1)
 
   liftIO $ putStrLn ""
   liftIO $ putStrLn "- 2. -----------------------------"
-  itemList2 <- liftIO $ getUserItemsFirstPage' "k-yamada@github" 2
+  itemList2 <- liftIO $ getUserItemsFirstPage' "jabaraster" 2
   let items2 = fst itemList2
   liftIO $ mapM_ (\l ->  print $ l) (list items2)
   liftIO $ mapM_ (\l ->  print $ l) (pagenation items2)
